@@ -10,6 +10,8 @@ import tempfile
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
+from routes.obsidian import router as obsidian_router
+
 
 import requests
 from fastapi import FastAPI, Form, HTTPException, UploadFile
@@ -41,8 +43,10 @@ from services.security import DEFAULT_RATE_LIMITER, constant_time_equal, csrf_to
 from services.scoring_engine import calculate_metric_score, generate_alerts, simulate_measure_improvement
 from services.trends import build_measure_trends
 from services.workflow import create_task, list_tasks, update_task
+from services.cms_live import build_cms_snapshot
 
 app = FastAPI(title='Home Health Performance Intelligence Engine', version='2.2.0-secure')
+app.include_router(obsidian_router)
 
 SECRET_KEY = os.getenv('SESSION_SECRET_KEY') or os.urandom(32).hex()
 APP_ENV = os.getenv('APP_ENV', 'local').lower()
@@ -59,7 +63,10 @@ for directory in [UPLOAD_DIR, REPORTS_DIR, STATIC_DIR, TEMPLATES_DIR, BASE_DIR /
     directory.mkdir(exist_ok=True)
 
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+from jinja2 import Environment, FileSystemLoader
+
+templates_env = Environment(loader=FileSystemLoader("templates"))
+templates = Jinja2Templates(directory="templates")
 
 CMS_TIMEOUT = 20
 CMS_BASE = 'https://data.cms.gov/resource'
@@ -139,16 +146,14 @@ def enforce_upload_policy(filename: str, size_bytes: int) -> None:
 @app.middleware('http')
 async def security_middleware(request: Request, call_next):
     ip = client_ip(request)
-    if not DEFAULT_RATE_LIMITER.allow(f'{ip}:{request.url.path}'):
-        return JSONResponse({'detail': 'Rate limit exceeded.'}, status_code=429)
+
+    if request.url.path == "/login":
+        return await call_next(request)
+
+    if not DEFAULT_RATE_LIMITER.allow(f"{ip}:{request.url.path}"):
+        return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
+
     response = await call_next(request)
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Cache-Control'] = 'no-store'
-    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-    csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';"
-    response.headers['Content-Security-Policy'] = csp
     return response
 
 
@@ -510,15 +515,12 @@ def process_agency_payload(data: dict[str, Any], save_record: bool = False) -> d
 
 
 @app.get('/login', response_class=HTMLResponse)
+@app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    if current_user_from_session(request):
-        return RedirectResponse(url='/', status_code=302)
-    return templates.TemplateResponse('login.html', {'request': request, 'csrf_token': ensure_csrf(request), 'bootstrap_path': BOOTSTRAP_FILE.name})
-
-
+    template = templates_env.get_template("login.html")
+    return HTMLResponse(template.render(request=request))
 @app.post('/login')
-async def login_submit(request: Request, username: str = Form(...), password: str = Form(...), csrf_token_value: str = Form(..., alias='csrf_token')):
-    validate_csrf(request, csrf_token_value)
+async def login_submit(request: Request, username: str = Form(...), password: str = Form(...), csrf_token_value: str | None = Form(None, alias='csrf_token')):
     user = authenticate_user(username, password)
     if not user:
         append_audit_event('login_failed', f'Failed login for {username.strip().lower()}', user='anonymous', ip_address=client_ip(request))
@@ -560,7 +562,7 @@ async def intake_form(request: Request):
         return RedirectResponse(url='/login', status_code=302)
     recent_records = list_agency_records()[:5]
     recent_audit = list_audit_events(10)
-    return templates.TemplateResponse('index_v2.html', {
+    return templates.TemplateResponse(request, 'index_v2.html', {
         'request': request,
         'pain_points': PAIN_POINT_CHOICES,
         'recent_records': recent_records,
@@ -897,3 +899,79 @@ async def cms_debug(request: Request, agency_name: str, state: str, city: str = 
         change_resistance='Moderate', training_infrastructure='Informal', pain_points=[], notes=''
     )
     return JSONResponse(enrich_with_cms(agency_name, state, city, data))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@app.get('/api/cms/provider-lookup')
+async def api_cms_provider_lookup(agency_name: str, state: str, city: str = ''):
+    return JSONResponse(build_cms_snapshot(agency_name=agency_name, state=state, city=(city or None)))
+
+
+
+@app.get('/dashboard', response_class=HTMLResponse)
+async def dashboard_page(request: Request):
+    sample = {
+        'agency_name': 'abc Home Health Agency',
+        'city': 'Petersburg',
+        'state': 'VA',
+        'tier': 'At Risk',
+        'total_score': 36,
+        'star_rating': 3.5,
+        'readmission_rate': 20,
+        'patient_satisfaction': 87,
+        'oasis_timeliness': 92,
+        'soc_delay_days': 5,
+        'visit_completion_rate': 87,
+        'documentation_lag_hours': 40,
+        'turnover_rate': 30,
+        'clinicians_total': 20,
+        'avg_monthly_patients': 80,
+        'cms_status': 'disabled_pending_verified_source',
+        'risks': [
+            {'title': 'HHVBP Risk', 'detail': 'Readmission rate is above preferred operating range.'},
+            {'title': 'Documentation Risk', 'detail': 'Documentation lag exceeds next-day expectation.'},
+            {'title': 'Access Risk', 'detail': 'Start-of-care delays are greater than 3 days.'},
+            {'title': 'Operational Reliability', 'detail': 'Visit completion rate is below benchmark.'}
+        ],
+        'recommendations': [
+            {'title': 'Stabilize Care Operations', 'detail': 'Implement weekly discharge planning reviews and referral triage.'},
+            {'title': 'Enhance Documentation Discipline', 'detail': 'Track late notes and coach clinicians on chart completion.'},
+            {'title': 'Improve Staffing Reliability', 'detail': 'Analyze turnover drivers and tighten scheduling workflows.'}
+        ],
+        'action_plan': [
+            'Month 1: Root cause analysis on readmissions.',
+            'Month 1: Implement referral triage rules.',
+            'Month 2: Launch documentation lag tracking.',
+            'Month 2: Start retention survey and exit interviews.',
+            'Month 3: Optimize scheduling workflows.',
+            'Month 3: Develop formal training modules.'
+        ],
+        'roi_points': [
+            'Reducing readmissions by 5% can improve payment adjustments.',
+            'Improving SOC delays under 3 days may lift patient satisfaction.',
+            'Raising visit completion above 90% can improve continuity and reduce overtime.',
+            'Cutting documentation lag below 24 hours reduces compliance risk.'
+        ]
+    }
+    return templates.TemplateResponse(request, 'dashboard.html', sample)
+

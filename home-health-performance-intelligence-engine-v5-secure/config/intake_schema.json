@@ -1,0 +1,57 @@
+{
+  "sections": [
+    {
+      "id": "agency_profile",
+      "title": "Agency Profile",
+      "fields": [
+        {"name": "agency_name", "type": "text", "required": true},
+        {"name": "state", "type": "text", "required": true},
+        {"name": "city", "type": "text", "required": false},
+        {"name": "ownership_type", "type": "select", "options": ["Private", "Franchise", "Hospital-affiliated", "Nonprofit"], "required": true},
+        {"name": "medicare_certified", "type": "boolean", "required": true},
+        {"name": "medicaid_certified", "type": "boolean", "required": false}
+      ]
+    },
+    {
+      "id": "volume_capacity",
+      "title": "Patient Volume and Capacity",
+      "fields": [
+        {"name": "avg_monthly_patients", "type": "number"},
+        {"name": "new_referrals_per_week", "type": "number"},
+        {"name": "clinicians_total", "type": "number"},
+        {"name": "open_positions", "type": "number"}
+      ]
+    },
+    {
+      "id": "care_delivery",
+      "title": "Care Delivery Metrics",
+      "fields": [
+        {"name": "star_rating", "type": "number"},
+        {"name": "readmission_rate", "type": "number"},
+        {"name": "patient_satisfaction", "type": "number"},
+        {"name": "oasis_timeliness", "type": "number"},
+        {"name": "soc_delay_days", "type": "number"}
+      ]
+    },
+    {
+      "id": "operations",
+      "title": "Operational Performance",
+      "fields": [
+        {"name": "documentation_lag_hours", "type": "number"},
+        {"name": "visit_completion_rate", "type": "number"},
+        {"name": "scheduling_method", "type": "select", "options": ["Manual", "EMR", "Hybrid"]},
+        {"name": "referral_intake_method", "type": "select", "options": ["Fax", "Portal", "Phone", "Mixed"]}
+      ]
+    },
+    {
+      "id": "workforce",
+      "title": "Workforce and Leadership",
+      "fields": [
+        {"name": "turnover_rate", "type": "number"},
+        {"name": "leadership_readiness", "type": "select", "options": ["Low", "Moderate", "High"]},
+        {"name": "training_infrastructure", "type": "select", "options": ["None", "Informal", "Structured"]},
+        {"name": "change_resistance", "type": "select", "options": ["Low", "Moderate", "High"]}
+      ]
+    }
+  ]
+}

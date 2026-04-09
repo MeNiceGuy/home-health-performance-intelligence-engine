@@ -1,0 +1,114 @@
+from __future__ import annotations
+
+from typing import Any
+import requests
+
+CMS_BASE = "https://data.cms.gov/resource"
+HOME_HEALTH_DATASET = "home-health-agency-data"
+STATE_DATASET = "home-health-state-data"
+HHVBP_DATASET = "hhvbp-agency-data"
+CMS_TIMEOUT = 20
+
+
+def _coerce_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        text = str(value).replace("%", "").replace(",", "").strip()
+        return float(text)
+    except Exception:
+        return None
+
+
+def _session() -> requests.Session:
+    return requests.Session()
+
+
+def _get(dataset: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    url = f"{CMS_BASE}/{dataset}.json"
+    try:
+        r = _session().get(url, params=params, timeout=CMS_TIMEOUT)
+        if r.status_code != 200:
+            return []
+        data = r.json()
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _pick(row: dict[str, Any], *names: str) -> Any:
+    for name in names:
+        if name in row and row[name] not in (None, ""):
+            return row[name]
+    return None
+
+
+def find_provider(agency_name: str, state: str, city: str | None = None) -> dict[str, Any]:
+    params = {
+        "$limit": 5,
+        "state": state.upper().strip(),
+        "$order": "provider_name"
+    }
+    rows = _get(HOME_HEALTH_DATASET, params)
+
+    agency_name_l = agency_name.strip().lower()
+    city_l = (city or "").strip().lower()
+
+    scored: list[tuple[int, dict[str, Any]]] = []
+    for row in rows:
+        provider_name = str(_pick(row, "provider_name", "agency_name", "name") or "").lower()
+        provider_city = str(_pick(row, "city") or "").lower()
+
+        score = 0
+        if agency_name_l and agency_name_l in provider_name:
+            score += 10
+        if provider_name and provider_name in agency_name_l:
+            score += 6
+        if city_l and provider_city == city_l:
+            score += 3
+
+        scored.append((score, row))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return scored[0][1] if scored else {}
+
+
+def get_state_benchmarks(state: str) -> dict[str, Any]:
+    rows = _get(STATE_DATASET, {"state": state.upper().strip(), "$limit": 1})
+    return rows[0] if rows else {}
+
+
+def get_hhvbp(provider_ccn: str) -> dict[str, Any]:
+    if not provider_ccn:
+        return {}
+    rows = _get(HHVBP_DATASET, {"ccn": str(provider_ccn).strip(), "$limit": 1})
+    return rows[0] if rows else {}
+
+
+def build_cms_snapshot(agency_name: str, state: str, city: str | None = None) -> dict[str, Any]:
+    provider = find_provider(agency_name=agency_name, state=state, city=city)
+    ccn = _pick(provider, "ccn", "cms_certification_number", "provider_id", "federal_provider_number")
+    state_row = get_state_benchmarks(state)
+    hhvbp = get_hhvbp(str(ccn) if ccn else "")
+
+    return {
+        "match_found": bool(provider),
+        "provider_name": _pick(provider, "provider_name", "agency_name", "name"),
+        "ccn": ccn,
+        "state": _pick(provider, "state") or state.upper().strip(),
+        "city": _pick(provider, "city") or city,
+        "address": _pick(provider, "address", "street_address"),
+        "phone": _pick(provider, "telephone_number", "phone_number", "phone"),
+        "star_rating": _coerce_float(_pick(provider, "quality_of_patient_care_star_rating", "star_rating")),
+        "timely_initiation_of_care": _coerce_float(_pick(provider, "how_often_the_home_health_team_began_their_patients_care_in_a_timely_manner", "timely_initiation_of_care")),
+        "patient_satisfaction": _coerce_float(_pick(provider, "percent_of_patients_who_reported_that_their_home_health_team_communicated_well_with_them", "patient_satisfaction")),
+        "state_benchmarks": {
+            "star_rating": _coerce_float(_pick(state_row, "quality_of_patient_care_star_rating", "star_rating")),
+            "timely_initiation_of_care": _coerce_float(_pick(state_row, "how_often_the_home_health_team_began_their_patients_care_in_a_timely_manner", "timely_initiation_of_care")),
+            "patient_satisfaction": _coerce_float(_pick(state_row, "percent_of_patients_who_reported_that_their_home_health_team_communicated_well_with_them", "patient_satisfaction")),
+        },
+        "hhvbp": hhvbp,
+        "raw_provider": provider,
+        "raw_state": state_row,
+        "cms_status": "graceful_fallback"
+    }
