@@ -1,0 +1,14 @@
+{
+  "agency_name": "Sample Care Agency",
+  "region": "Midwest",
+  "agency_size": "30 employees",
+  "ownership_type": "Privately owned",
+  "tech_stack": "EVV, EHR, basic telehealth",
+  "challenges": "high staff turnover, slow patient intake",
+  "hhvbp_concerns": "patient readmissions, documentation delays",
+  "workforce_issues": "scheduling conflicts, burnout",
+  "budget_posture": "lean budget",
+  "leadership_readiness": "moderate",
+  "learning_culture": "developing",
+  "notes": "Focusing on quality improvement initiatives this year."
+}

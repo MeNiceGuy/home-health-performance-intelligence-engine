@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Home Health Tool</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>User Management</h1>
+    <a href="/">Dashboard</a>
+    <a href="/users/add">Add User</a>
+    <table border="1" cellpadding="5" cellspacing="0">
+        <thead>
+            <tr><th>Username</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user }}</td>
+                <td><a href="/users/delete/{{ user }}">Delete</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2">No users found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

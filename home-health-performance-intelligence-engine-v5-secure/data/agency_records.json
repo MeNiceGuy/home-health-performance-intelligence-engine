@@ -1,0 +1,68 @@
+[
+  {
+    "id": "dec44453-55c3-4c47-bbe1-a69833daade2",
+    "agency_name": "ABC Home Health",
+    "state": "VA",
+    "city": "Richmond",
+    "created_at": "2026-04-08T19:21:41.929283+00:00",
+    "updated_at": "2026-04-08T19:21:41.929297+00:00",
+    "record": {
+      "agency_name": "ABC Home Health",
+      "state": "VA",
+      "city": "Richmond",
+      "ownership_type": "Private",
+      "avg_monthly_patients": 120,
+      "clinicians_total": 12,
+      "star_rating": 3.0,
+      "readmission_rate": 18.0,
+      "patient_satisfaction": 81.0,
+      "oasis_timeliness": 84.0,
+      "soc_delay_days": 2.0,
+      "visit_completion_rate": 89.0,
+      "documentation_lag_hours": 36.0,
+      "turnover_rate": 22.0,
+      "open_positions": 2,
+      "visits_per_clinician_week": 28.0,
+      "ehr_vendor": "WellSky",
+      "evv_present": true,
+      "scheduling_software": "AxisCare",
+      "telehealth_present": true,
+      "automation_present": false,
+      "monthly_revenue_range": "500K-1M",
+      "cost_pressure_level": "High",
+      "improvement_budget": "10K-50K",
+      "leadership_readiness": "Moderate",
+      "change_resistance": "Moderate",
+      "training_infrastructure": "Informal",
+      "pain_points": [
+        "High readmissions"
+      ],
+      "cms_context": {
+        "state_benchmarks": {
+          "star_rating": 3.5,
+          "readmission_rate": 15,
+          "patient_satisfaction": 85
+        }
+      },
+      "scorecard": {},
+      "notes": "",
+      "monthly_series": [
+        {
+          "readmission_rate": 20,
+          "oasis_timeliness": 80,
+          "patient_satisfaction": 79
+        },
+        {
+          "readmission_rate": 19,
+          "oasis_timeliness": 82,
+          "patient_satisfaction": 80
+        },
+        {
+          "readmission_rate": 18,
+          "oasis_timeliness": 84,
+          "patient_satisfaction": 81
+        }
+      ]
+    }
+  }
+]

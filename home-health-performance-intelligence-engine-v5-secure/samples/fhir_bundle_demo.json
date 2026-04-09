@@ -1,0 +1,11 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {"resource": {"resourceType": "Patient", "id": "p1", "name": [{"given": ["John"], "family": "Carter"}] }},
+    {"resource": {"resourceType": "Encounter", "id": "e1", "status": "finished", "subject": {"reference": "Patient/p1"}, "period": {"start": "2026-03-02T09:00:00"}, "hospitalization": {"dischargeDisposition": {"text": "home"}}}},
+    {"resource": {"resourceType": "Observation", "id": "o1", "subject": {"reference": "Patient/p1"}, "effectiveDateTime": "2026-03-02T10:00:00", "code": {"text": "Patient Satisfaction"}, "valueQuantity": {"value": 89}}},
+    {"resource": {"resourceType": "Observation", "id": "o2", "subject": {"reference": "Patient/p1"}, "effectiveDateTime": "2026-03-02T10:05:00", "code": {"text": "OASIS Timeliness"}, "valueQuantity": {"value": 100}}},
+    {"resource": {"resourceType": "Observation", "id": "o3", "subject": {"reference": "Patient/p1"}, "effectiveDateTime": "2026-03-02T10:06:00", "code": {"text": "Documentation Lag Hours"}, "valueQuantity": {"value": 12}}}
+  ]
+}

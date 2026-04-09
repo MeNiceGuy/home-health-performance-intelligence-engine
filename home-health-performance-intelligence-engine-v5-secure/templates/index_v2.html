@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home Health Performance Intelligence Engine</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f5f7fb; color: #0f172a; }
+    .wrap { max-width: 1300px; margin: 24px auto; padding: 20px; }
+    .page { display:grid; grid-template-columns: 1.2fr .8fr; gap:20px; align-items:start; }
+    .card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(15,23,42,.08); }
+    h1,h3 { margin-top: 0; }
+    h2 { margin-top: 24px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .stats { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+    .stat { background:#eff6ff; border:1px solid #bfdbfe; padding:14px; border-radius:12px; }
+    .stat strong { display:block; font-size: 24px; }
+    label { font-weight: 600; display: block; margin-bottom: 6px; }
+    input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; }
+    textarea { min-height: 120px; }
+    .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .checks label { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+    .full { grid-column: 1 / -1; }
+    .actions { margin-top: 24px; display: flex; gap: 12px; flex-wrap:wrap; }
+    button { background: #1d4ed8; color: #fff; border: none; border-radius: 10px; padding: 12px 18px; font-weight: 700; cursor: pointer; }
+    button.secondary { background:#334155; }
+    button.light { background:#e2e8f0; color:#0f172a; }
+    .muted { color: #475569; font-size: 14px; }
+    .list { margin: 0; padding-left: 18px; }
+    .pill { display:inline-block; padding:4px 8px; border-radius:999px; background:#e2e8f0; font-size:12px; margin-right:6px; }
+    .record, .event, .alert { border:1px solid #e2e8f0; border-radius:12px; padding:12px; margin-bottom:10px; }
+    .high { border-color:#fecaca; background:#fef2f2; }
+    .medium { border-color:#fde68a; background:#fffbeb; }
+    .low { border-color:#bbf7d0; background:#f0fdf4; }
+    .mono { font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
+    .section-stack > * + * { margin-top: 16px; }
+    .hidden { display:none; }
+    @media (max-width: 1020px) { .page { grid-template-columns: 1fr; } .grid,.grid-3,.checks,.stats { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="page">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;"><div><h1>Home Health Performance Intelligence Engine</h1><p class="muted">Signed in as <strong>{{ current_user.username }}</strong> · Role: {{ current_user.role }}</p></div><form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="light" type="submit">Logout</button></form></div>
+        <p class="muted">Structured intake for consulting-grade diagnostics, CMS cross-checking, metric-based scoring, compliance risk checks, workflow generation, and executive-ready reports.</p>
+
+        <form id="report-form" action="/generate_report" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <h2>1. Agency Profile</h2>
+          <div class="grid">
+            <div><label>Agency Name</label><input name="agency_name" required></div>
+            <div><label>Ownership Type</label><select name="ownership_type" required><option>Private</option><option>Nonprofit</option><option>Hospital-affiliated</option></select></div>
+            <div><label>State</label><input name="state" required placeholder="VA"></div>
+            <div><label>City</label><input name="city" required></div>
+            <div><label>Average Monthly Patients</label><input name="avg_monthly_patients" placeholder="150"></div>
+            <div><label>Total Clinicians</label><input name="clinicians_total" placeholder="28"></div>
+          </div>
+
+          <h2>2. Performance Metrics</h2>
+          <div class="grid-3">
+            <div><label>Star Rating</label><input name="star_rating" placeholder="1-5 or leave blank"></div>
+            <div><label>Readmission Rate (%)</label><input name="readmission_rate" placeholder="18"></div>
+            <div><label>Patient Satisfaction (%)</label><input name="patient_satisfaction" placeholder="84"></div>
+            <div><label>OASIS Timeliness (%)</label><input name="oasis_timeliness" placeholder="92"></div>
+            <div><label>Start-of-Care Delay (days)</label><input name="soc_delay_days" placeholder="2"></div>
+            <div><label>Visit Completion Rate (%)</label><input name="visit_completion_rate" placeholder="90"></div>
+            <div><label>Documentation Lag (hours)</label><input name="documentation_lag_hours" placeholder="36"></div>
+            <div><label>Staff Turnover Rate (%)</label><input name="turnover_rate" placeholder="24"></div>
+            <div><label>Open Positions</label><input name="open_positions" placeholder="4"></div>
+            <div><label>Visits per Clinician per Week</label><input name="visits_per_clinician_week" placeholder="28"></div>
+          </div>
+
+          <h2>3. Technology Stack</h2>
+          <div class="grid">
+            <div><label>EHR Vendor</label><input name="ehr_vendor" placeholder="Homecare Homebase"></div>
+            <div><label>Scheduling Software</label><input name="scheduling_software" placeholder="AxisCare"></div>
+            <div><label>EVV Present</label><select name="evv_present"><option value="true">Yes</option><option value="false">No</option></select></div>
+            <div><label>Telehealth Present</label><select name="telehealth_present"><option value="true">Yes</option><option value="false">No</option></select></div>
+            <div><label>Automation / AI Tools Present</label><select name="automation_present"><option value="true">Yes</option><option value="false">No</option></select></div>
+          </div>
+
+          <h2>4. Financial Position</h2>
+          <div class="grid">
+            <div><label>Monthly Revenue Range</label><input name="monthly_revenue_range" placeholder="$250K-$500K"></div>
+            <div><label>Cost Pressure Level</label><select name="cost_pressure_level" required><option>Low</option><option selected>Moderate</option><option>High</option></select></div>
+            <div><label>Improvement Budget</label><select name="improvement_budget" required><option>None</option><option>&lt;10K</option><option>10K-50K</option><option>50K+</option></select></div>
+          </div>
+
+          <h2>5. Leadership + Execution Reality</h2>
+          <div class="grid">
+            <div><label>Leadership Readiness</label><select name="leadership_readiness" required><option>Low</option><option selected>Moderate</option><option>High</option></select></div>
+            <div><label>Change Resistance</label><select name="change_resistance" required><option>Low</option><option selected>Moderate</option><option>High</option></select></div>
+            <div><label>Training Infrastructure</label><select name="training_infrastructure" required><option>None</option><option selected>Informal</option><option>Structured program</option></select></div>
+          </div>
+
+          <h2>6. Strategic Pain Points</h2>
+          <div class="checks">
+            {% for key, label_text in pain_points.items() %}
+            <label><input type="checkbox" name="pain_points" value="{{ key }}"> {{ label_text }}</label>
+            {% endfor %}
+          </div>
+
+          <h2>7. EMR Import</h2>
+          <div class="grid">
+            <div><label>EMR Source Type</label><select id="emr-source-type"><option value="csv">CSV Export</option><option value="fhir">FHIR Bundle JSON</option></select></div>
+            <div><label>EMR File</label><input id="emr-file" type="file" accept=".csv,.json"></div>
+          </div>
+          <div class="actions" style="margin-top:12px;">
+            <button type="button" class="secondary" id="emr-upload-btn">Import EMR Data</button>
+          </div>
+
+          <h2>8. Output</h2>
+          <div class="grid">
+            <div class="full"><label>Additional Notes</label><textarea name="notes" placeholder="Use this for context that is real and specific, such as branch expansion, payer mix pressure, or staffing constraints."></textarea></div>
+            <div><label>Output Format</label><select name="output_format"><option value="pdf">PDF</option><option value="md">Markdown</option></select></div>
+          </div>
+
+          <div class="actions">
+            <button type="submit">Generate Intelligence Report</button>
+            <button type="button" class="secondary" id="analyze-btn">Analyze & Save Record</button>
+            <button type="button" class="light" id="simulate-btn">Run OASIS +5 Simulation</button>
+          </div>
+          <details style="margin-top:20px;"><summary><strong>Change Password</strong></summary><div class="grid" style="margin-top:12px;"><div><label>Current Password</label><input form="change-password-form" type="password" name="current_password" required></div><div><label>New Password</label><input form="change-password-form" type="password" name="new_password" minlength="12" required></div></div><form id="change-password-form" action="/change-password" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="actions"><button type="submit" class="secondary">Update Password</button></div></form></details>
+        </form>
+      </div>
+
+      <div class="section-stack">
+        <div class="card">
+          <h3>Live Dashboard</h3>
+          <div class="stats">
+            <div class="stat"><span>Score</span><strong id="score">--</strong><span id="tier" class="muted">No analysis yet</span></div>
+            <div class="stat"><span>Payment Impact</span><strong id="payment-impact">--</strong><span id="peer-rank" class="muted">--</span></div>
+            <div class="stat"><span>Top Risk</span><strong id="top-risk" style="font-size:16px">--</strong><span id="confidence" class="muted">--</span></div>
+          </div>
+          <div id="alerts"></div>
+          <h4>Compliance Findings</h4>
+          <div id="compliance"></div>
+          <h4>Trend Forecasts</h4>
+          <div id="trends"></div>
+          <h4>Simulation Result</h4>
+          <div id="simulation" class="muted">Run simulation to view scenario modeling.</div>
+        </div>
+
+        <div class="card">
+          <h3>EMR Import History</h3>
+          <div id="emr-imports" class="muted">No EMR imports yet.</div>
+        </div>
+
+        <div class="card">
+          <h3>Saved Agency Records</h3>
+          <div id="records">
+            {% for item in recent_records %}
+            <div class="record"><strong>{{ item.agency_name }}</strong><div class="muted">{{ item.city }}, {{ item.state }} · {{ item.updated_at }}</div><div class="mono">ID: {{ item.id }}</div></div>
+            {% else %}
+            <p class="muted">No saved records yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Workflow Queue</h3>
+          <div id="workflow-list" class="muted">Run analysis to generate action items.</div>
+        </div>
+
+        <div class="card">
+          <h3>Recent Audit Events</h3>
+          <div id="audit-events">
+            {% for event in recent_audit %}
+            <div class="event"><strong>{{ event.action }}</strong><div class="muted">{{ event.timestamp }}</div><div>{{ event.detail }}</div></div>
+            {% else %}
+            <p class="muted">No audit activity yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const form = document.getElementById('report-form');
+const csrfToken = '{{ csrf_token }}';
+const analyzeBtn = document.getElementById('analyze-btn');
+const simulateBtn = document.getElementById('simulate-btn');
+const emrUploadBtn = document.getElementById('emr-upload-btn');
+
+function formToObject(formEl) {
+  const fd = new FormData(formEl);
+  const obj = {};
+  for (const [key, value] of fd.entries()) {
+    if (obj[key] !== undefined) {
+      if (!Array.isArray(obj[key])) obj[key] = [obj[key]];
+      obj[key].push(value);
+    } else {
+      obj[key] = value;
+    }
+  }
+  return obj;
+}
+
+function toNum(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = Number(String(v).replace('%','').replaceAll(',',''));
+  return Number.isNaN(n) ? v : n;
+}
+
+function normalizePayload(raw) {
+  const numeric = ['avg_monthly_patients','clinicians_total','star_rating','readmission_rate','patient_satisfaction','oasis_timeliness','soc_delay_days','visit_completion_rate','documentation_lag_hours','turnover_rate','open_positions','visits_per_clinician_week'];
+  const bools = ['evv_present','telehealth_present','automation_present'];
+  const payload = {...raw};
+  numeric.forEach(k => payload[k] = toNum(payload[k]));
+  bools.forEach(k => payload[k] = String(payload[k]).toLowerCase() === 'true');
+  if (!Array.isArray(payload.pain_points)) payload.pain_points = payload.pain_points ? [payload.pain_points] : [];
+  payload.monthly_series = [
+    {readmission_rate: payload.readmission_rate ? payload.readmission_rate + 2 : null, oasis_timeliness: payload.oasis_timeliness ? payload.oasis_timeliness - 4 : null, patient_satisfaction: payload.patient_satisfaction ? payload.patient_satisfaction - 2 : null},
+    {readmission_rate: payload.readmission_rate ? payload.readmission_rate + 1 : null, oasis_timeliness: payload.oasis_timeliness ? payload.oasis_timeliness - 2 : null, patient_satisfaction: payload.patient_satisfaction ? payload.patient_satisfaction - 1 : null},
+    {readmission_rate: payload.readmission_rate, oasis_timeliness: payload.oasis_timeliness, patient_satisfaction: payload.patient_satisfaction}
+  ];
+  return payload;
+}
+
+function renderAlerts(alerts) {
+  const root = document.getElementById('alerts');
+  root.innerHTML = alerts.length ? alerts.map(a => `<div class="alert ${a.severity}"><strong>${a.source || 'alert'}</strong><div>${a.alert}</div></div>`).join('') : '<p class="muted">No major alerts.</p>';
+}
+
+function renderCompliance(items) {
+  const root = document.getElementById('compliance');
+  root.innerHTML = items.length ? items.map(i => `<div class="alert ${i.severity}"><strong>${i.compliance_flag}</strong> <span class="pill">${i.category || 'general'}</span><div>${i.issue}</div><div class="muted">${i.recommendation}</div></div>`).join('') : '<p class="muted">No compliance findings.</p>';
+}
+
+
+function renderEmrImports(items) {
+  const root = document.getElementById('emr-imports');
+  root.innerHTML = items.length ? items.map(i => `<div class="record"><strong>${i.agency_name}</strong><div class="muted">${i.source_type.toUpperCase()} · ${i.row_count} rows · ${i.imported_at}</div><div class="mono">${JSON.stringify(i.summary, null, 2)}</div></div>`).join('') : '<p class="muted">No EMR imports yet.</p>';
+}
+async function refreshEmrImports(agencyName) {
+  const q = agencyName ? `?agency_name=${encodeURIComponent(agencyName)}` : '';
+  const res = await fetch(`/api/emr/imports${q}`);
+  const data = await res.json();
+  renderEmrImports(data.imports || []);
+}
+
+function renderTrends(trends) {
+  const root = document.getElementById('trends');
+  const entries = Object.entries(trends || {});
+  root.innerHTML = entries.length ? entries.map(([k,v]) => `<div class="record"><strong>${k}</strong><div class="muted">Trend: ${v.trend}</div><div>30/60/90 forecast: ${v.forecast_30 ?? '--'} / ${v.forecast_60 ?? '--'} / ${v.forecast_90 ?? '--'}</div></div>`).join('') : '<p class="muted">No trend data available.</p>';
+}
+
+function renderRecords(records) {
+  const root = document.getElementById('records');
+  root.innerHTML = records.length ? records.slice(0,8).map(r => `<div class="record"><strong>${r.agency_name}</strong><div class="muted">${r.city || ''}, ${r.state || ''}</div><div class="mono">${r.id}</div></div>`).join('') : '<p class="muted">No saved records yet.</p>';
+}
+
+function renderAudit(events) {
+  const root = document.getElementById('audit-events');
+  root.innerHTML = events.length ? events.slice(0,10).map(e => `<div class="event"><strong>${e.action}</strong><div class="muted">${e.timestamp}</div><div>${e.detail}</div></div>`).join('') : '<p class="muted">No audit activity yet.</p>';
+}
+
+function renderWorkflow(tasks) {
+  const root = document.getElementById('workflow-list');
+  root.innerHTML = tasks.length ? tasks.map(t => `<div class="record"><strong>${t.title}</strong><div class="muted">${t.priority} · ${t.status} · ${t.assigned_to}</div></div>`).join('') : '<p class="muted">No workflow tasks yet.</p>';
+}
+
+async function refreshMeta() {
+  const [recordsRes, auditRes] = await Promise.all([fetch('/api/records'), fetch('/api/audit')]);
+  renderRecords((await recordsRes.json()).records || []);
+  renderAudit((await auditRes.json()).events || []);
+}
+
+async function createWorkflowTasks(agencyName, alerts) {
+  const candidates = alerts.slice(0,3).map((a, idx) => ({
+    title: a.alert,
+    agency_name: agencyName,
+    assigned_to: idx === 0 ? 'Clinical Manager' : (idx === 1 ? 'QA Lead' : 'Administrator'),
+    priority: a.severity === 'high' ? 'high' : 'medium',
+    source: a.source || 'analysis',
+    notes: 'Auto-generated from dashboard analysis.'
+  }));
+  for (const task of candidates) {
+    await fetch('/api/workflow/create', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token': csrfToken}, body: JSON.stringify(task)});
+  }
+  const workflowRes = await fetch(`/api/workflow?agency_name=${encodeURIComponent(agencyName)}`);
+  renderWorkflow((await workflowRes.json()).tasks || []);
+}
+
+async function analyze(saveRecord=true) {
+  const payload = normalizePayload(formToObject(form));
+  const res = await fetch('/api/intake', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token': csrfToken}, body: JSON.stringify({data: payload, save_record: saveRecord})});
+  const data = await res.json();
+  document.getElementById('score').textContent = data.scorecard.total_score;
+  document.getElementById('tier').textContent = data.scorecard.tier;
+  document.getElementById('payment-impact').textContent = `${data.scorecard.estimated_payment_impact_pct}%`;
+  document.getElementById('peer-rank').textContent = data.scorecard.peer_rank_hint;
+  document.getElementById('top-risk').textContent = data.scorecard.executive_summary.top_risk;
+  document.getElementById('confidence').textContent = data.cms_context.agency_match_confidence;
+  renderAlerts(data.alerts || []);
+  renderCompliance(data.compliance_findings || []);
+  renderTrends(data.trend_summary || {});
+  await createWorkflowTasks(data.agency_name, data.alerts || []);
+  await refreshMeta();
+  return data;
+}
+
+analyzeBtn.addEventListener('click', async () => { await analyze(true); });
+emrUploadBtn.addEventListener('click', async () => {
+  const fileInput = document.getElementById('emr-file');
+  const sourceType = document.getElementById('emr-source-type').value;
+  const raw = formToObject(form);
+  if (!fileInput.files.length) { alert('Choose a CSV or JSON file first.'); return; }
+  const fd = new FormData();
+  fd.append('agency_name', raw.agency_name || 'Imported Agency');
+  fd.append('state', raw.state || '');
+  fd.append('city', raw.city || '');
+  fd.append('ownership_type', raw.ownership_type || 'Private');
+  fd.append('source_type', sourceType);
+  fd.append('file', fileInput.files[0]);
+  const res = await fetch('/api/emr/upload', { method:'POST', headers:{'X-CSRF-Token': csrfToken}, body: fd });
+  const data = await res.json();
+  if (!res.ok) { alert(data.detail || 'EMR import failed'); return; }
+  const analysis = data.analysis || {};
+  document.getElementById('score').textContent = analysis.scorecard?.total_score ?? '--';
+  document.getElementById('tier').textContent = analysis.scorecard?.tier ?? '--';
+  document.getElementById('payment-impact').textContent = `${analysis.scorecard?.estimated_payment_impact_pct ?? '--'}%`;
+  document.getElementById('peer-rank').textContent = analysis.scorecard?.peer_rank_hint ?? '--';
+  document.getElementById('top-risk').textContent = analysis.scorecard?.executive_summary?.top_risk ?? '--';
+  renderAlerts(analysis.alerts || []);
+  renderCompliance(analysis.compliance_findings || []);
+  renderTrends(analysis.trend_summary || {});
+  await refreshEmrImports(raw.agency_name || '');
+});
+
+simulateBtn.addEventListener('click', async () => {
+  const data = await analyze(false);
+  const res = await fetch('/api/simulate', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token': csrfToken}, body: JSON.stringify({data, measure:'oasis_timeliness', improvement:5})});
+  const sim = await res.json();
+  document.getElementById('simulation').innerHTML = `<div class="record"><strong>${sim.measure}</strong><div>Score change: ${sim.score_change}</div><div>Payment change: ${sim.payment_impact_change_pct}%</div><div>Peer rank: ${sim.peer_rank_change.before} → ${sim.peer_rank_change.after}</div></div>`;
+  await refreshMeta();
+});
+
+refreshMeta();
+refreshEmrImports('');
+</script>
+</body>
+</html>

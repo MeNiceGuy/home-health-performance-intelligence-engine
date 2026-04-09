@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Client Demo | Home Health Performance Intelligence Engine</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background:#0f172a; color:#e2e8f0; }
+    .wrap { max-width: 1280px; margin:0 auto; padding:32px 20px 60px; }
+    .hero { display:grid; grid-template-columns: 1.2fr .8fr; gap:24px; align-items:center; }
+    .hero-card,.card { background:rgba(15,23,42,.72); border:1px solid rgba(148,163,184,.25); border-radius:20px; padding:24px; backdrop-filter: blur(10px); }
+    .accent { color:#38bdf8; }
+    .grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:18px; margin-top:24px; }
+    .metric { background:#111827; border:1px solid #1f2937; border-radius:16px; padding:18px; }
+    .metric strong { display:block; font-size:30px; margin-top:8px; }
+    button { background:#2563eb; border:none; color:white; padding:12px 16px; border-radius:12px; font-weight:700; cursor:pointer; }
+    .ghost { background:transparent; border:1px solid #334155; }
+    .scenario { background:#111827; border:1px solid #1f2937; border-radius:16px; padding:18px; }
+    .scenario h3 { margin-top:0; }
+    .muted { color:#94a3b8; }
+    .pill { display:inline-block; background:#1e293b; color:#93c5fd; padding:4px 10px; border-radius:999px; font-size:12px; margin-right:8px; }
+    #output .record { border:1px solid #334155; border-radius:12px; padding:12px; margin-top:10px; background:#0b1220; }
+    @media (max-width: 900px) { .hero, .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="hero-card">
+        <div class="pill">Client-ready demo</div>
+        <h1>Turn home health data into <span class="accent">payment-risk decisions</span>.</h1>
+        <p class="muted">This demo shows how the platform ingests agency or EMR data, benchmarks against CMS logic, identifies compliance risk, forecasts trend direction, and generates an action plan that leaders can execute.</p>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;">
+          <button onclick="runScenario('at-risk')">Run At-Risk Agency Demo</button>
+          <button class="ghost" onclick="runScenario('improving')">Run Improving Agency Demo</button>
+          <button class="ghost" onclick="window.location='/'">Open Analyst Workspace</button>
+        </div>
+      </div>
+      <div class="hero-card">
+        <h3>What the client sees</h3>
+        <div class="metric"><span class="muted">Estimated HHVBP payment impact</span><strong id="paymentImpact">--</strong></div>
+        <div class="metric" style="margin-top:12px;"><span class="muted">Top risk</span><strong id="topRisk" style="font-size:22px;">--</strong></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      {% for scenario in scenarios %}
+      <div class="scenario">
+        <div class="pill">{{ scenario.tag }}</div>
+        <h3>{{ scenario.name }}</h3>
+        <p class="muted">{{ scenario.description }}</p>
+        <button onclick="runScenario('{{ scenario.slug }}')">Load scenario</button>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="card" style="margin-top:24px;">
+      <h2>Live output</h2>
+      <div id="output" class="muted">Choose a scenario to populate the executive view.</div>
+    </div>
+  </div>
+<script>
+async function runScenario(slug) {
+  const res = await fetch(`/api/demo/scenarios/${slug}`);
+  const data = await res.json();
+  document.getElementById('paymentImpact').textContent = `${data.scorecard.estimated_payment_impact_pct}%`;
+  document.getElementById('topRisk').textContent = data.scorecard.executive_summary.top_risk || '--';
+  const alerts = (data.alerts || []).map(a => `<div class="record"><strong>${a.source || 'Alert'}</strong><div>${a.alert}</div></div>`).join('');
+  const compliance = (data.compliance_findings || []).map(c => `<div class="record"><strong>${c.compliance_flag}</strong><div>${c.issue}</div><div class="muted">${c.recommendation}</div></div>`).join('');
+  const workflow = (data.workflow || []).map(w => `<div class="record"><strong>${w.title}</strong><div class="muted">${w.priority} · ${w.assigned_to}</div></div>`).join('');
+  document.getElementById('output').innerHTML = `
+    <div class="record"><strong>${data.agency_name}</strong><div class="muted">Score ${data.scorecard.total_score} · ${data.scorecard.tier} · ${data.scorecard.peer_rank_hint}</div></div>
+    <h3>Alerts</h3>${alerts || '<p class="muted">No alerts.</p>'}
+    <h3>Compliance</h3>${compliance || '<p class="muted">No findings.</p>'}
+    <h3>Workflow</h3>${workflow || '<p class="muted">No tasks generated.</p>'}
+  `;
+}
+</script>
+</body>
+</html>

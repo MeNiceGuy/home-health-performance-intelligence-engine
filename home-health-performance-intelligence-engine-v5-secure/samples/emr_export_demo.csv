@@ -1,0 +1,5 @@
+patient_id,patient_name,admit_date,start_of_care_date,visit_date,completed_visit,hospitalized,satisfaction_score,oasis_timely,documentation_lag_hours
+P001,John Carter,2026-03-01,2026-03-02,2026-03-02,true,false,88,1,14
+P002,Mary Hayes,2026-03-02,2026-03-05,2026-03-05,true,true,76,0,52
+P003,Robert King,2026-03-04,2026-03-04,2026-03-04,false,false,82,1,28
+P001,John Carter,2026-03-01,2026-03-08,2026-03-08,true,false,90,1,10

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Login - Home Health Tool</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="wrap" style="max-width:520px;margin:48px auto;">
+        <div class="card">
+            <h1>Secure Login</h1>
+            <p class="muted">Use the bootstrap admin credentials created on first run. Check <code>data/{{ bootstrap_path }}</code> locally if you did not set environment-based bootstrap credentials.</p>
+            {% if error %}<div class="alert high">{{ error }}</div>{% endif %}
+            <form method="post" action="/login">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <label for="username">Username</label><br>
+                <input type="text" id="username" name="username" required autocomplete="username"><br><br>
+                <label for="password">Password</label><br>
+                <input type="password" id="password" name="password" required autocomplete="current-password"><br><br>
+                <button type="submit">Login</button>
+            </form>
+            <p class="muted" style="margin-top:16px;">Client-safe demo remains publicly available at <a href="/client-demo">/client-demo</a>.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,3 @@
+username=admin
+password=ccc0b903bce51fb554Aa!9
+role=admin
