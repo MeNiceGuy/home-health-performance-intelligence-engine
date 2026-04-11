@@ -1,7 +1,39 @@
 services:
   - type: web
-    name: home-health-engine
+    name: bhpi-backend
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        value: supersecretkeychange
+      - key: DATABASE_URL
+        value: sqlite:///./app.db
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: bhpi-redis
+          property: connectionString
+
+  - type: worker
+    name: bhpi-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.workers.celery_app.celery_app worker --loglevel=info
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: bhpi-redis
+          property: connectionString
+
+  - type: keyvalue
+    name: bhpi-redis
+
+  - type: static
+    name: bhpi-frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    rootDir: frontend
