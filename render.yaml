@@ -1,14 +1,16 @@
 services:
   - type: web
     name: bhpi-backend
-    env: python
+    runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: APP_ENV
         value: production
-      - key: SECRET_KEY
+      - key: JWT_SECRET_KEY
         value: supersecretkeychange
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "120"
       - key: DATABASE_URL
         value: sqlite:///./app.db
       - key: REDIS_URL
@@ -16,24 +18,57 @@ services:
           type: keyvalue
           name: bhpi-redis
           property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: bhpi-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: bhpi-redis
+          property: connectionString
+      - key: REPORTS_DIR
+        value: reports
 
   - type: worker
     name: bhpi-worker
-    env: python
+    runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: celery -A app.workers.celery_app.celery_app worker --loglevel=info
     envVars:
+      - key: APP_ENV
+        value: production
+      - key: JWT_SECRET_KEY
+        value: supersecretkeychange
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "120"
+      - key: DATABASE_URL
+        value: sqlite:///./app.db
       - key: REDIS_URL
         fromService:
           type: keyvalue
           name: bhpi-redis
           property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: bhpi-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: bhpi-redis
+          property: connectionString
+      - key: REPORTS_DIR
+        value: reports
 
   - type: keyvalue
     name: bhpi-redis
 
-  - type: static
+  - type: web
     name: bhpi-frontend
+    runtime: static
+    rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
-    rootDir: frontend
