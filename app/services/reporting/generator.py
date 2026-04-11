@@ -23,6 +23,12 @@ def build_markdown_report(payload: dict):
     compliance_text = "\n".join(f"- {c}" for c in compliance) if compliance else "- None"
     trends_text = "\n".join(f"- {k}: {v}" for k, v in trends.items()) if trends else "- None"
 
+    cms_text = "- No CMS benchmark match found"
+    if risk.get("cms_agency_name"):
+        cms_text = f"""- Agency Match: {risk.get('cms_agency_name')}
+- CMS Star Rating: {risk.get('cms_star_rating')}
+- CMS Hospitalization Rate: {risk.get('cms_readmission')}"""
+
     return f"""# Boswell Consulting Group
 ## Home Health Performance Intelligence Report
 
@@ -39,6 +45,9 @@ Agency: {payload.get("agency_name")} | {payload.get("city")}, {payload.get("stat
 - Readmission rate: {payload.get("readmission_rate")}
 - Patient satisfaction: {payload.get("patient_satisfaction")}
 - OASIS timeliness: {payload.get("oasis_timeliness")}
+
+## CMS Benchmark
+{cms_text}
 
 ## Strategic Intelligence
 {summary}
