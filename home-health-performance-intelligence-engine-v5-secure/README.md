@@ -1,13 +1,15 @@
 # Home Health Performance Intelligence Engine
 
-AI decision-intelligence platform for home health agencies to analyze HHVBP performance, benchmark peers, simulate reimbursement impact, flag compliance risk, and turn findings into action workflows.
+A decision intelligence platform for home health agencies that generates:
+- Executive performance reports
+- HHVBP-aligned scoring
+- Operational risk analysis
+- ROI-driven improvement strategies
 
-## Live demo
-After deployment, use these links at the very top of your GitHub repo:
-
-- **Analyst workspace:** `https://YOUR-APP.onrender.com`
-- **Client demo:** `https://YOUR-APP.onrender.com/client-demo`
-- **Login:** `https://YOUR-APP.onrender.com/login`
+Demo Features:
+- PDF report generation
+- Simulation engine (readmission-based)
+- CMS data integration (in progress)
 
 ## Why recruiters and clients should care
 This project is built to show end-to-end product thinking:
