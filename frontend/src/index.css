@@ -1,0 +1,19 @@
+body {
+  margin: 0;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-family: Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+button {
+  cursor: pointer;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+}
+input, textarea, select, button { font: inherit; }
+a { text-decoration: none; color: #2563eb; font-weight: 600; }
+h1, h2, h3 { color: #0f172a; }
