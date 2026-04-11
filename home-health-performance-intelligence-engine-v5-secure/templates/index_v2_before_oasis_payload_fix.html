@@ -336,7 +336,7 @@ emrUploadBtn.addEventListener('click', async () => {
 
 simulateBtn.addEventListener('click', async () => {
   const data = await analyze(false);
-  const res = await fetch('/api/simulate', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token': csrfToken}, body: JSON.stringify({data, measure: 'readmission_rate', improvement: -5})});
+  const res = await fetch('/api/simulate', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token': csrfToken}, body: JSON.stringify({data, measure:'oasis_timeliness', improvement:5})});
   const sim = await res.json();
   document.getElementById('simulation').innerHTML = `<div class="record"><strong>${sim.measure}</strong><div>Score change: ${sim.score_change}</div><div>Payment change: ${sim.payment_impact_change_pct}%</div><div>Peer rank: ${sim.peer_rank_change.before} â†’ ${sim.peer_rank_change.after}</div></div>`;
   await refreshMeta();
@@ -374,11 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 star_rating: Number(document.getElementById('star_rating')?.value || 0),
                 readmission_rate: Number(document.getElementById('readmission_rate')?.value || 0),
                 patient_satisfaction: Number(document.getElementById('patient_satisfaction')?.value || 0),
-                oasis_timeliness: (function() {
-    const el = document.getElementById('oasis_timeliness');
-    if (el && el.value !== '') return Number(el.value);
-    return 92; // fallback demo value
-})(),
+                oasis_timeliness: Number(document.getElementById('oasis_timeliness')?.value || 0),
                 soc_delay_days: Number(document.getElementById('soc_delay_days')?.value || 0),
                 visit_completion_rate: Number(document.getElementById('visit_completion_rate')?.value || 0),
                 documentation_lag_hours: Number(document.getElementById('documentation_lag_hours')?.value || 0),
@@ -402,8 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 scorecard: {},
                 monthly_series: []
             },
-            measure: 'readmission_rate',
-            improvement: -5
+            measure: 'oasis_timeliness',
+            improvement: 5
         };
 
         if (loadingBox) {
@@ -422,8 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Content-Type': 'application/json',
                     'x-csrf-token': csrfEl ? csrfEl.value : ''
                 },
-                console.log('SIM PAYLOAD:', payload);
-body: JSON.stringify(payload)
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
@@ -457,10 +452,6 @@ body: JSON.stringify(payload)
 </script>
 </body>
 </html>
-
-
-
-
 
 
 

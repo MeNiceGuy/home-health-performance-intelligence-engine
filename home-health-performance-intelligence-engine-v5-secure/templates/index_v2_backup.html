@@ -123,7 +123,7 @@
           <div class="actions">
             <button type="submit">Generate Intelligence Report</button>
             <button type="button" class="secondary" id="analyze-btn">Analyze & Save Record</button>
-            <button type="button" class="light" id="simulate-btn"><span id="oasisSimLabel">Run OASIS +5 Simulation</span></button>
+            <button type="button" class="light" id="simulate-btn">Run OASIS +5 Simulation</button>
           </div>
           <details style="margin-top:20px;"><summary><strong>Change Password</strong></summary><div class="grid" style="margin-top:12px;"><div><label>Current Password</label><input form="change-password-form" type="password" name="current_password" required></div><div><label>New Password</label><input form="change-password-form" type="password" name="new_password" minlength="12" required></div></div><form id="change-password-form" action="/change-password" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="actions"><button type="submit" class="secondary">Update Password</button></div></form></details>
         </form>
@@ -336,7 +336,7 @@ emrUploadBtn.addEventListener('click', async () => {
 
 simulateBtn.addEventListener('click', async () => {
   const data = await analyze(false);
-  const res = await fetch('/api/simulate', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token': csrfToken}, body: JSON.stringify({data, measure: 'readmission_rate', improvement: -5})});
+  const res = await fetch('/api/simulate', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token': csrfToken}, body: JSON.stringify({data, measure:'oasis_timeliness', improvement:5})});
   const sim = await res.json();
   document.getElementById('simulation').innerHTML = `<div class="record"><strong>${sim.measure}</strong><div>Score change: ${sim.score_change}</div><div>Payment change: ${sim.payment_impact_change_pct}%</div><div>Peer rank: ${sim.peer_rank_change.before} â†’ ${sim.peer_rank_change.after}</div></div>`;
   await refreshMeta();
@@ -345,122 +345,6 @@ simulateBtn.addEventListener('click', async () => {
 refreshMeta();
 refreshEmrImports('');
 </script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const trendBox = document.getElementById('trendBox');
-    const errorBox = document.getElementById('errorBox');
-    const loadingBox = document.getElementById('loadingBox');
-    const csrfEl = document.getElementById('csrfToken');
-
-    const simButton =
-        document.querySelector('#oasisSimBtn') ||
-        Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Run OASIS +5 Simulation'));
-
-    if (!simButton) return;
-
-    if (!simButton.id) simButton.id = 'oasisSimBtn';
-
-    simButton.addEventListener('click', async (e) => {
-        e.preventDefault();
-
-        const payload = {
-            data: {
-                agency_name: document.getElementById('agency_name')?.value || '',
-                state: document.getElementById('state')?.value || '',
-                city: document.getElementById('city')?.value || '',
-                ownership_type: document.getElementById('ownership_type')?.value || 'Private',
-                avg_monthly_patients: Number(document.getElementById('avg_monthly_patients')?.value || 0),
-                clinicians_total: Number(document.getElementById('clinicians_total')?.value || 0),
-                star_rating: Number(document.getElementById('star_rating')?.value || 0),
-                readmission_rate: Number(document.getElementById('readmission_rate')?.value || 0),
-                patient_satisfaction: Number(document.getElementById('patient_satisfaction')?.value || 0),
-                oasis_timeliness: (function() {
-    const el = document.getElementById('oasis_timeliness');
-    if (el && el.value !== '') return Number(el.value);
-    return 92; // fallback demo value
-})(),
-                soc_delay_days: Number(document.getElementById('soc_delay_days')?.value || 0),
-                visit_completion_rate: Number(document.getElementById('visit_completion_rate')?.value || 0),
-                documentation_lag_hours: Number(document.getElementById('documentation_lag_hours')?.value || 0),
-                turnover_rate: Number(document.getElementById('turnover_rate')?.value || 0),
-                open_positions: Number(document.getElementById('open_positions')?.value || 0),
-                visits_per_clinician_week: Number(document.getElementById('visits_per_clinician_week')?.value || 0),
-                ehr_vendor: document.getElementById('ehr_vendor')?.value || '',
-                evv_present: (document.getElementById('evv_present')?.value || 'false') === 'true',
-                scheduling_software: document.getElementById('scheduling_software')?.value || '',
-                telehealth_present: (document.getElementById('telehealth_present')?.value || 'false') === 'true',
-                automation_present: (document.getElementById('automation_present')?.value || 'false') === 'true',
-                monthly_revenue_range: document.getElementById('monthly_revenue_range')?.value || '',
-                cost_pressure_level: document.getElementById('cost_pressure_level')?.value || 'Moderate',
-                improvement_budget: document.getElementById('improvement_budget')?.value || 'None',
-                leadership_readiness: document.getElementById('leadership_readiness')?.value || 'Moderate',
-                change_resistance: document.getElementById('change_resistance')?.value || 'Moderate',
-                training_infrastructure: document.getElementById('training_infrastructure')?.value || 'Informal',
-                pain_points: Array.from(document.querySelectorAll('input[name="pain_points"]:checked')).map(el => el.value),
-                notes: document.getElementById('notes')?.value || '',
-                cms_context: {},
-                scorecard: {},
-                monthly_series: []
-            },
-            measure: 'readmission_rate',
-            improvement: -5
-        };
-
-        if (loadingBox) {
-            loadingBox.style.display = 'block';
-            loadingBox.textContent = 'Running OASIS +5 simulation...';
-        }
-        if (errorBox) {
-            errorBox.style.display = 'none';
-            errorBox.textContent = '';
-        }
-
-        try {
-            const response = await fetch('/api/simulate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-csrf-token': csrfEl ? csrfEl.value : ''
-                },
-                console.log('SIM PAYLOAD:', payload);
-body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(text || 'Simulation request failed.');
-            }
-
-            const result = await response.json();
-
-            if (trendBox) {
-                trendBox.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
-            } else {
-                alert('Simulation completed.');
-                console.log(result);
-            }
-        } catch (err) {
-            if (errorBox) {
-                errorBox.textContent = err.message || 'Simulation failed.';
-                errorBox.style.display = 'block';
-            } else {
-                alert(err.message || 'Simulation failed.');
-            }
-        } finally {
-            if (loadingBox) {
-                loadingBox.style.display = 'none';
-                loadingBox.textContent = 'Analyzing agency performance, calculating scorecard, and generating intelligence...';
-            }
-        }
-    });
-});
-</script>
 </body>
 </html>
-
-
-
-
-
-
 

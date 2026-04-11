@@ -115,8 +115,6 @@ def ensure_csrf(request: Request) -> str:
 
 
 def validate_csrf(request: Request, token: str | None) -> None:
-    if DEMO_MODE:
-        return
     session_token = request.session.get('csrf_token')
     if not session_token or not token or not constant_time_equal(session_token, token):
         raise HTTPException(status_code=403, detail='Invalid CSRF token.')
@@ -998,7 +996,6 @@ async def dashboard_page(request: Request):
         ]
     }
     return templates.TemplateResponse(request, 'dashboard.html', sample)
-
 
 
 

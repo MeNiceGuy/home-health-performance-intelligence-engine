@@ -336,7 +336,7 @@ emrUploadBtn.addEventListener('click', async () => {
 
 simulateBtn.addEventListener('click', async () => {
   const data = await analyze(false);
-  const res = await fetch('/api/simulate', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token': csrfToken}, body: JSON.stringify({data, measure: 'readmission_rate', improvement: -5})});
+  const res = await fetch('/api/simulate', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token': csrfToken}, body: JSON.stringify({data, measure:'oasis_timeliness', improvement:5})});
   const sim = await res.json();
   document.getElementById('simulation').innerHTML = `<div class="record"><strong>${sim.measure}</strong><div>Score change: ${sim.score_change}</div><div>Payment change: ${sim.payment_impact_change_pct}%</div><div>Peer rank: ${sim.peer_rank_change.before} â†’ ${sim.peer_rank_change.after}</div></div>`;
   await refreshMeta();
@@ -402,8 +402,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 scorecard: {},
                 monthly_series: []
             },
-            measure: 'readmission_rate',
-            improvement: -5
+            measure: 'oasis_timeliness',
+            improvement: 5
         };
 
         if (loadingBox) {
@@ -457,8 +457,6 @@ body: JSON.stringify(payload)
 </script>
 </body>
 </html>
-
-
 
 
 

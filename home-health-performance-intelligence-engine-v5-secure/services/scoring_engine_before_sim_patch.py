@@ -188,52 +188,23 @@ def generate_alerts(scorecard: dict[str, Any], compliance_findings: list[dict[st
 
 def simulate_measure_improvement(data: dict[str, Any], measure: str, improvement: float) -> dict[str, Any]:
     clone = dict(data)
-
-    aliases = {
-        "oasis_timeliness": ["oasis_timeliness", "timely_initiation_of_care"],
-        "readmission_rate": ["readmission_rate"],
-        "patient_satisfaction": ["patient_satisfaction"],
-        "visit_completion_rate": ["visit_completion_rate"],
-    }
-
-    candidate_keys = aliases.get(measure, [measure])
-
-    current = None
-    resolved_key = measure
-
-    for key in candidate_keys:
-        value = clone.get(key)
-        if value is not None and value != "":
-            current = value
-            resolved_key = key
-            break
-
+    current = clone.get(measure)
     if current is None:
         raise ValueError(f"Measure '{measure}' is unavailable for simulation.")
-
-    current = float(current)
-    clone[resolved_key] = current + improvement
-
+    clone[measure] = current + improvement
     updated = calculate_metric_score(clone)
-    baseline = data.get("scorecard") or calculate_metric_score(data)
-
+    baseline = data.get('scorecard') or calculate_metric_score(data)
     return {
-        "measure": measure,
-        "resolved_key": resolved_key,
-        "baseline_value": current,
-        "simulated_value": clone[resolved_key],
-        "baseline_score": baseline.get("total_score"),
-        "simulated_score": updated.get("total_score"),
-        "score_change": updated.get("total_score", 0) - baseline.get("total_score", 0),
-        "payment_impact_change_pct": round(
-            updated.get("estimated_payment_impact_pct", 0)
-            - baseline.get("estimated_payment_impact_pct", 0),
-            2,
-        ),
-        "peer_rank_change": {
-            "before": baseline.get("peer_rank_hint"),
-            "after": updated.get("peer_rank_hint"),
-        },
+        'measure': measure,
+        'baseline_value': current,
+        'simulated_value': clone[measure],
+        'baseline_score': baseline.get('total_score'),
+        'simulated_score': updated.get('total_score'),
+        'score_change': updated.get('total_score', 0) - baseline.get('total_score', 0),
+        'payment_impact_change_pct': round(updated.get('estimated_payment_impact_pct', 0) - baseline.get('estimated_payment_impact_pct', 0), 2),
+        'peer_rank_change': {
+            'before': baseline.get('peer_rank_hint'),
+            'after': updated.get('peer_rank_hint'),
+        }
     }
-
 

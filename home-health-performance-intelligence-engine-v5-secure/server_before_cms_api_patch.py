@@ -70,10 +70,10 @@ templates_env = Environment(loader=FileSystemLoader("templates"))
 templates = Jinja2Templates(directory="templates")
 
 CMS_TIMEOUT = 20
-CMS_CATALOG_URL = 'https://data.cms.gov/data.json'
-HOME_HEALTH_TITLE = 'Home Health Care Agencies'
-HHVBP_TITLE = 'Expanded Home Health Value-Based Purchasing (HHVBP) Model - Agency Data'
-STATE_TITLE = 'Home Health Agency Performance Data by State'
+CMS_BASE = 'https://data.cms.gov/resource'
+HOME_HEALTH_DATASET = '6jpm-sxkc'
+STATE_DATASET = 'tee5-ixt5'
+HHVBP_DATASET = '56d7-4994'
 
 
 
@@ -115,8 +115,6 @@ def ensure_csrf(request: Request) -> str:
 
 
 def validate_csrf(request: Request, token: str | None) -> None:
-    if DEMO_MODE:
-        return
     session_token = request.session.get('csrf_token')
     if not session_token or not token or not constant_time_equal(session_token, token):
         raise HTTPException(status_code=403, detail='Invalid CSRF token.')
@@ -294,25 +292,12 @@ def compact_json(data: Any, max_chars: int = 900) -> str:
 
 
 
-def resolve_cms_access_url(title: str) -> str | None:
-    response = requests.get(CMS_CATALOG_URL, timeout=CMS_TIMEOUT)
-    response.raise_for_status()
-    catalog = response.json()
-    for dataset in catalog.get('dataset', []):
-        if dataset.get('title') == title:
-            for distro in dataset.get('distribution', []):
-                if distro.get('format') == 'API' and distro.get('description') == 'latest':
-                    return distro.get('accessURL')
-    return None
-
-def fetch_cms_rows(dataset_title: str, query: str = '', limit: int = 25, offset: int = 0) -> list[dict]:
-    access_url = resolve_cms_access_url(dataset_title)
-    if not access_url:
-        return []
-    params = {'size': limit, 'offset': offset}
+def fetch_cms_rows(dataset_id: str, query: str = '', limit: int = 25) -> list[dict]:
+    url = f'{CMS_BASE}/{dataset_id}.json'
+    params = {'$limit': limit}
     if query:
-        params['keyword'] = query
-    response = requests.get(access_url, params=params, timeout=CMS_TIMEOUT)
+        params['$q'] = query
+    response = requests.get(url, params=params, timeout=CMS_TIMEOUT)
     response.raise_for_status()
     data = response.json()
     return data if isinstance(data, list) else []
@@ -421,7 +406,7 @@ def enrich_with_cms(agency_name: str, state: str, city: str, data: dict[str, Any
     hhvbp_match = None
 
     try:
-        agency_rows = fetch_cms_rows(HOME_HEALTH_TITLE, query=agency_name, limit=25)
+        agency_rows = fetch_cms_rows(HOME_HEALTH_DATASET, query=agency_name, limit=25)
         agency_match, agency_score = find_best_match(agency_rows, agency_name, state, city)
         if agency_match:
             confidence = f'Matched ({agency_score:.1f})'
@@ -431,7 +416,7 @@ def enrich_with_cms(agency_name: str, state: str, city: str, data: dict[str, Any
         notes.append(f'Provider dataset lookup failed: {exc}')
 
     try:
-        hhvbp_rows = fetch_cms_rows(HHVBP_TITLE, query=agency_name, limit=25)
+        hhvbp_rows = fetch_cms_rows(HHVBP_DATASET, query=agency_name, limit=25)
         hhvbp_match, hhvbp_score = find_best_match(hhvbp_rows, agency_name, state, city)
         if hhvbp_match and confidence == 'No match':
             confidence = f'HHVBP-only match ({hhvbp_score:.1f})'
@@ -441,7 +426,7 @@ def enrich_with_cms(agency_name: str, state: str, city: str, data: dict[str, Any
         notes.append(f'HHVBP dataset lookup failed: {exc}')
 
     try:
-        state_rows = fetch_cms_rows(STATE_TITLE, query=state, limit=25)
+        state_rows = fetch_cms_rows(STATE_DATASET, query=state, limit=25)
         state_benchmarks = extract_state_benchmarks(state_rows, state)
         if not state_benchmarks:
             notes.append('No state benchmark row was confidently extracted.')
@@ -998,9 +983,6 @@ async def dashboard_page(request: Request):
         ]
     }
     return templates.TemplateResponse(request, 'dashboard.html', sample)
-
-
-
 
 
 
