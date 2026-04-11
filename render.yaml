@@ -8,7 +8,7 @@ services:
       - key: APP_ENV
         value: production
       - key: JWT_SECRET_KEY
-        value: supersecretkeychange
+        sync: false
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "120"
       - key: DATABASE_URL
@@ -40,7 +40,7 @@ services:
       - key: APP_ENV
         value: production
       - key: JWT_SECRET_KEY
-        value: supersecretkeychange
+        sync: false
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "120"
       - key: DATABASE_URL
@@ -65,6 +65,9 @@ services:
 
   - type: keyvalue
     name: bhpi-redis
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: allow all
 
   - type: web
     name: bhpi-frontend
