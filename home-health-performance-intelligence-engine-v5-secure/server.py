@@ -44,6 +44,7 @@ from services.scoring_engine import calculate_metric_score, generate_alerts, sim
 from services.trends import build_measure_trends
 from services.workflow import create_task, list_tasks, update_task
 from services.cms_live import build_cms_snapshot
+from services.local_provider_match import match_uploaded_provider_csv
 
 app = FastAPI(title='Home Health Performance Intelligence Engine', version='2.2.0-secure')
 app.include_router(obsidian_router)
@@ -525,8 +526,49 @@ def process_agency_payload(data: dict[str, Any], save_record: bool = False) -> d
     agency_name = data.get('agency_name', '')
     state = data.get('state', '')
     city = data.get('city', '')
-    if agency_name and state:
-        data = enrich_with_cms(agency_name, state, city, data)
+
+    local_match = match_uploaded_provider_csv(agency_name, state, city)
+    if local_match:
+    print('FORCED CSV MATCH:', local_match.get('matched_provider'))
+
+    verified = local_match.get('verified_metrics', {})
+
+    data['star_rating'] = verified.get('star_rating', data.get('star_rating'))
+    data['readmission_rate'] = verified.get('readmission_rate', data.get('readmission_rate'))
+    data['oasis_timeliness'] = verified.get('oasis_timeliness', data.get('oasis_timeliness'))
+
+    data['cms_context'] = {
+        'agency_match_confidence': local_match.get('match_confidence'),
+        'confidence_level': local_match.get('confidence_level'),
+        'match_score': local_match.get('match_score'),
+        'matched_data_source': 'uploaded_provider_csv',
+        'locked': True
+    }
+
+    return data  # 🔥 CRITICAL — STOP PIPELINE HERE
+        verified = local_match.get('verified_metrics', {})
+        if verified.get('star_rating') is not None:
+            data['star_rating'] = verified['star_rating']
+        if verified.get('readmission_rate') is not None:
+            data['readmission_rate'] = verified['readmission_rate']
+        if verified.get('oasis_timeliness') is not None:
+            data['oasis_timeliness'] = verified['oasis_timeliness']
+
+        data['cms_context'] = {
+            'agency_match_confidence': local_match.get('match_confidence'),
+            'confidence_level': local_match.get('confidence_level', 'Unknown'),
+            'match_score': local_match.get('match_score'),
+            'verified_metrics': verified,
+            'state_benchmarks': {},
+            'notes': 'Matched from uploaded provider CSV.',
+            'matched_data_source': 'uploaded_provider_csv',
+            'matched_provider_name': local_match.get('matched_provider'),
+            'matched_city': local_match.get('matched_city'),
+            'matched_state': local_match.get('matched_state'),
+        }
+    elif agency_name and state:
+        if not data.get('cms_context', {}).get('locked'):
+    data = enrich_with_cms(agency_name, state, city, data)
     data = enrich_locally(data)
     if save_record:
         saved = save_agency_record(data)
@@ -764,13 +806,7 @@ async def api_alerts(request: Request, agency_name: str, state: str, city: str =
 
 @app.post('/api/simulate')
 async def api_simulate(request: Request, payload: SimulationRequest):
-    user = require_user(request, {'admin','analyst'})
-    validate_csrf(request, request.headers.get('x-csrf-token'))
-    data = enrich_locally(payload.data)
-    result = simulate_measure_improvement(data, payload.measure, payload.improvement)
-    append_audit_event('simulation_run', f"Simulation run for {payload.measure} (+{payload.improvement}).", user=user['username'], agency_name=data.get('agency_name', ''), ip_address=client_ip(request))
-    return JSONResponse(result)
-
+    raise HTTPException(status_code=410, detail='Simulation is disabled in this demo build.')
 
 @app.get('/api/trends')
 async def api_trends(request: Request, agency_name: str, state: str, city: str = ''):
@@ -998,6 +1034,22 @@ async def dashboard_page(request: Request):
         ]
     }
     return templates.TemplateResponse(request, 'dashboard.html', sample)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

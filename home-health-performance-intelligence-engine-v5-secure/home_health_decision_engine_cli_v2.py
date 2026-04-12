@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import argparse
@@ -27,7 +27,7 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
 SYSTEM_PROMPT = """You are a senior healthcare strategy consultant.
 Create executive-ready reports for home health agencies.
 Separate facts, benchmarks, interpretations, and recommendations.
-Never invent CMS values. If a metric is unavailable, say so.
+Never invent CMS values. If a metric is Not Provided, say so.
 """
 
 AGENCY_SCHEMA = {
@@ -77,7 +77,7 @@ AGENCY_SCHEMA = {
 
 def fmt(value: Any, suffix: str = "") -> str:
     if value is None:
-        return "Unavailable"
+        return "Not Provided"
     if isinstance(value, float) and value.is_integer():
         value = int(value)
     return f"{value}{suffix}"
@@ -126,7 +126,9 @@ Execution conditions:
 - Pain points: {pain_points}
 
 CMS context:
-- Match confidence: {cms.get('agency_match_confidence', 'Unavailable')}
+- Match confidence: {cms.get('agency_match_confidence', 'Not Provided')}
+- Confidence level: {cms.get('confidence_level', 'Not Provided')}
+- Match score: {cms.get('match_score', 'Not Provided')}
 - Verified metrics: {json.dumps(cms.get('verified_metrics', {}), ensure_ascii=False)}
 - State benchmarks: {json.dumps(cms.get('state_benchmarks', {}), ensure_ascii=False)}
 - CMS notes: {cms.get('notes', 'None')}
@@ -147,6 +149,11 @@ Notes: {data.get('notes', '')}
 Required headings:
 # Home Health Performance Intelligence Report
 ## Data Transparency Notice
+
+Matched Data Source:
+- Uploaded Provider CSV
+- Confidence Level: {cms.get('confidence_level','Unknown')}
+
 ## Executive Summary
 ## Performance Snapshot
 ## Benchmarking and Peer Position
@@ -210,10 +217,15 @@ def build_fallback_markdown(data: dict[str, Any]) -> str:
     )
     alert_lines = "\n".join([f"- {a['severity'].upper()}: {a['alert']}" for a in alerts]) or "- No immediate alerts generated."
     compliance_lines = "\n".join([f"- {f['compliance_flag']} ({f['severity']}): {f['issue']} Recommendation: {f['recommendation']}" for f in findings])
-    trend_lines = "\n".join([f"- {k}: {v['trend']} (forecast next: {v['forecast_next']})" for k, v in trends.items()]) or "- Trend data unavailable."
+    trend_lines = "\n".join([f"- {k}: {v['trend']} (forecast next: {v['forecast_next']})" for k, v in trends.items()]) or "- Trend data Not Provided."
     return f"""# Home Health Performance Intelligence Report
 
 ## Data Transparency Notice
+
+Matched Data Source:
+- Uploaded Provider CSV
+- Confidence Level: {cms.get('confidence_level','Unknown')}
+
 Facts in this report are based on the agency intake file and any CMS values returned during lookup. CMS verified metrics and benchmark excerpts are shown in the CMS context field. Interpretive statements and recommendations are generated from the provided metrics and scoring logic.
 
 ## Executive Summary
@@ -223,7 +235,7 @@ Facts in this report are based on the agency intake file and any CMS values retu
 - Total score: {s['total_score']}/100
 - Tier: {s['tier']}
 - Dominant priority: {s['dominant_priority']}
-- Peer rank hint: {s.get('peer_rank_hint', 'Unavailable')}
+- Peer rank hint: {s.get('peer_rank_hint', 'Not Provided')}
 - Estimated payment impact: {s.get('estimated_payment_impact_pct', 0)}%
 
 ## Benchmarking and Peer Position
@@ -253,9 +265,9 @@ Facts in this report are based on the agency intake file and any CMS values retu
 {bullet_recs}
 
 ## Priority Ranking
-1. {recs[0]['name']} — Highest near-term return based on current operational pressure.
-2. {recs[1]['name']} — Important structural improvement with medium implementation effort.
-3. {recs[2]['name']} — Capability-building move that helps sustain results.
+1. {recs[0]['name']} â€” Highest near-term return based on current operational pressure.
+2. {recs[1]['name']} â€” Important structural improvement with medium implementation effort.
+3. {recs[2]['name']} â€” Capability-building move that helps sustain results.
 
 ## 90-Day Action Plan
 - Days 1-30: Confirm baseline metrics, assign workflow owners, and launch highest-priority corrective sprint.
@@ -340,3 +352,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
