@@ -8,13 +8,13 @@ AI-powered decision intelligence engine for home health agencies using CMS data,
 ## 📊 System Overview
 
 ### 📊 Analytics Dashboard
-![Dashboard](docs/images/frontend_screen.png)
+C:\Users\1bosw\OneDrive\Desktop/frontend_screen.png)
 
 ### 📝 Intake Interface
-![Intake](docs/images/intake_screen.png)
+C:\Users\1bosw\OneDrive\Desktop/intake_screen.png)
 
 ### 📄 Generated Report
-![Report](docs/images/report.png)
+C:\Users\1bosw\OneDrive\Desktop/sample_report.png)
 
 ---
 

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agency Scoring App</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Agency Scoring App</h1>
+      <form id="scoreForm" class="form">
+        <label>Agency Name
+          <input type="text" id="agency_name" value="Southside Regional Home Health">
+        </label>
+        <label>Readmission Rate
+          <input type="number" step="0.01" id="readmission_rate" value="4.08">
+        </label>
+        <label>Turnover Rate
+          <input type="number" step="0.01" id="turnover_rate" value="28">
+        </label>
+        <label>Start-of-Care Delay (days)
+          <input type="number" step="0.1" id="soc_delay_days" value="2.5">
+        </label>
+        <label>Documentation Lag (hours)
+          <input type="number" step="0.1" id="documentation_lag_hours" value="30">
+        </label>
+        <label class="check">
+          <input type="checkbox" id="user_reported" checked>
+          User reported data
+        </label>
+        <div>
+          <button type="submit" class="btn">Run Score</button>
+          <button type="button" class="btn secondary" onclick="loadLastReport()">Load Last Report</button>
+        </div>
+      </form>
+      <div id="result" class="result hidden"></div>
+    </div>
+  </div>
+  <script>
+    document.getElementById("scoreForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        agency_name: document.getElementById("agency_name").value,
+        readmission_rate: parseFloat(document.getElementById("readmission_rate").value || 0),
+        turnover_rate: parseFloat(document.getElementById("turnover_rate").value || 0),
+        soc_delay_days: parseFloat(document.getElementById("soc_delay_days").value || 0),
+        documentation_lag_hours: parseFloat(document.getElementById("documentation_lag_hours").value || 0),
+        user_reported: document.getElementById("user_reported").checked
+      };
+      const res = await fetch("/score", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      const saved = { payload, result: data, created_at: new Date().toLocaleString() };
+      localStorage.setItem("last_report", JSON.stringify(saved));
+      const box = document.getElementById("result");
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <h2>Agency Risk Report</h2>
+        <p><strong>Agency:</strong> ${payload.agency_name}</p>
+        <p><strong>Risk Level:</strong> ${data.risk}</p>
+        <p><strong>Data Confidence:</strong> ${data.confidence}</p>
+        <p><strong>Saved File:</strong> ${data.report_file}</p>
+        <p><em>Saved locally at ${saved.created_at}</em></p>`;
+    });
+    function loadLastReport() {
+      const stored = localStorage.getItem("last_report");
+      if (!stored) { alert("No saved report yet."); return; }
+      const data = JSON.parse(stored);
+      const box = document.getElementById("result");
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <h2>Saved Report</h2>
+        <p><strong>Agency:</strong> ${data.payload.agency_name}</p>
+        <p><strong>Risk:</strong> ${data.result.risk}</p>
+        <p><strong>Confidence:</strong> ${data.result.confidence}</p>
+        <p><em>Saved at: ${data.created_at}</em></p>`;
+    }
+  </script>
+</body>
+</html>
