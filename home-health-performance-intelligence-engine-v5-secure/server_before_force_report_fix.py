@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import json
@@ -545,7 +545,7 @@ def process_agency_payload(data: dict[str, Any], save_record: bool = False) -> d
             'locked': True
         }
 
-        return data  # CRITICAL — STOP PIPELINE HERE@app.get('/login', response_class=HTMLResponse)
+        return data  # CRITICAL � STOP PIPELINE HERE@app.get('/login', response_class=HTMLResponse)
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     if DEMO_MODE:
@@ -842,30 +842,78 @@ async def api_audit(request: Request, limit: int = 50):
 
 
 @app.post('/generate_report')
-async def generate_report(request: Request):
-    input_path = UPLOAD_DIR / 'portfolio_agency.json'
-    if not input_path.exists():
-        raise HTTPException(status_code=500, detail='Missing uploads/portfolio_agency.json')
-
-    safe_name = 'portfolio_report'
-    md_output = REPORTS_DIR / f'{safe_name}.md'
-
-    result = subprocess.run(
-        [sys.executable, str(BASE_DIR / 'home_health_decision_engine_cli_v2.py'), '-i', str(input_path), '-o', str(md_output)],
-        capture_output=True, text=True, cwd=str(BASE_DIR)
+async def generate_report(
+    request: Request,
+    csrf_token_value: str = Form(..., alias='csrf_token'),
+    agency_name: str = Form(...),
+    state: str = Form(...),
+    city: str = Form(...),
+    ownership_type: str = Form(...),
+    avg_monthly_patients: str = Form(''),
+    clinicians_total: str = Form(''),
+    star_rating: str = Form(''),
+    readmission_rate: str = Form(''),
+    patient_satisfaction: str = Form(''),
+    oasis_timeliness: str = Form(''),
+    soc_delay_days: str = Form(''),
+    visit_completion_rate: str = Form(''),
+    documentation_lag_hours: str = Form(''),
+    turnover_rate: str = Form(''),
+    open_positions: str = Form(''),
+    visits_per_clinician_week: str = Form(''),
+    ehr_vendor: str = Form(''),
+    evv_present: str = Form('false'),
+    scheduling_software: str = Form(''),
+    telehealth_present: str = Form('false'),
+    automation_present: str = Form('false'),
+    monthly_revenue_range: str = Form(''),
+    cost_pressure_level: str = Form(...),
+    improvement_budget: str = Form(...),
+    leadership_readiness: str = Form(...),
+    change_resistance: str = Form(...),
+    training_infrastructure: str = Form(...),
+    pain_points: list[str] = Form([]),
+    notes: str = Form(''),
+    output_format: str = Form('pdf'),
+):
+    user = require_user(request, {'admin','analyst'})
+    validate_csrf(request, csrf_token_value)
+    data = build_form_data(
+        agency_name=agency_name, state=state, city=city, ownership_type=ownership_type,
+        avg_monthly_patients=avg_monthly_patients, clinicians_total=clinicians_total,
+        star_rating=star_rating, readmission_rate=readmission_rate, patient_satisfaction=patient_satisfaction,
+        oasis_timeliness=oasis_timeliness, soc_delay_days=soc_delay_days, visit_completion_rate=visit_completion_rate,
+        documentation_lag_hours=documentation_lag_hours, turnover_rate=turnover_rate, open_positions=open_positions,
+        visits_per_clinician_week=visits_per_clinician_week, ehr_vendor=ehr_vendor, evv_present=evv_present,
+        scheduling_software=scheduling_software, telehealth_present=telehealth_present,
+        automation_present=automation_present, monthly_revenue_range=monthly_revenue_range,
+        cost_pressure_level=cost_pressure_level, improvement_budget=improvement_budget,
+        leadership_readiness=leadership_readiness, change_resistance=change_resistance,
+        training_infrastructure=training_infrastructure, pain_points=pain_points, notes=notes,
     )
-
-    if result.returncode != 0:
-        raise HTTPException(
-        status_code=500,
-        detail=f"Report generation failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
-    )
-
-    pdf_output = md_output.with_suffix('.pdf')
-    if pdf_output.exists():
+    try:
+        data = process_agency_payload(data, save_record=True)
+        safe_name = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '_' for ch in agency_name.strip()) or 'agency'
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8', dir=str(UPLOAD_DIR)) as tmp:
+            json.dump(data, tmp, ensure_ascii=False, indent=2)
+            tmp_path = Path(tmp.name)
+        md_output = REPORTS_DIR / f'{safe_name}.md'
+        result = subprocess.run(
+            [sys.executable, str(BASE_DIR / 'home_health_decision_engine_cli_v2.py'), '-i', str(tmp_path), '-o', str(md_output)],
+            capture_output=True, text=True, cwd=str(BASE_DIR)
+        )
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail=f'Report generation failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}')
+        pdf_output = md_output.with_suffix('.pdf')
+        append_audit_event('report_generated', f'Report generated in {output_format.upper()} format.', user=user['username'], agency_name=agency_name, ip_address=client_ip(request))
+        if output_format.lower().strip() == 'md':
+            return FileResponse(str(md_output), media_type='text/markdown', filename=md_output.name)
         return FileResponse(str(pdf_output), media_type='application/pdf', filename=pdf_output.name)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f'Unexpected server error: {exc}')
 
-    return FileResponse(str(md_output), media_type='text/markdown', filename=md_output.name)
 
 @app.get('/cms_debug')
 async def cms_debug(request: Request, agency_name: str, state: str, city: str = ''):
@@ -1001,7 +1049,7 @@ async def api_report_test():
     if result.returncode != 0:
         raise HTTPException(
             status_code=500,
-            detail=f"Report generation failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+            detail=f"Report generation failed.`nSTDOUT:`n{result.stdout}`nSTDERR:`n{result.stderr}"
         )
 
     return {"report": output_path.read_text(encoding="utf-8")}
@@ -1028,10 +1076,7 @@ async def api_report_test_get():
     if result.returncode != 0:
         raise HTTPException(
             status_code=500,
-            detail=f"Report generation failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+            detail=f"Report generation failed.`nSTDOUT:`n{result.stdout}`nSTDERR:`n{result.stderr}"
         )
 
     return PlainTextResponse(output_path.read_text(encoding="utf-8"))
-
-
-

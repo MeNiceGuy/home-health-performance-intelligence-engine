@@ -28,10 +28,6 @@ SYSTEM_PROMPT = """You are a senior healthcare strategy consultant.
 Create executive-ready reports for home health agencies.
 Separate facts, benchmarks, interpretations, and recommendations.
 Never invent CMS values. If a metric is Not Provided, say so.
-Never present user-reported data as verified.
-Clearly distinguish CMS-verified data, CSV-matched data, user-reported data, and Data Not Available data.
-If a metric is Data Not Available, explicitly state "Data not available".
-Do not infer or fabricate CMS values under any condition.
 """
 
 AGENCY_SCHEMA = {
@@ -96,9 +92,6 @@ def build_user_prompt(data: dict[str, Any]) -> str:
     alerts = data.get("alerts", [])
     trends = data.get("trend_summary", {})
     pain_points = ", ".join(data.get("pain_points", [])) if data.get("pain_points") else "None listed"
-    star_source = data.get("star_rating_source", "Unknown")
-    readmit_source = data.get("readmission_rate_source", "Unknown")
-    oasis_source = data.get("oasis_timeliness_source", "Unknown")
     return f"""
 Prepared date: {today}
 Agency: {data['agency_name']} | {data['city']}, {data['state']}
@@ -107,10 +100,10 @@ Patients: {fmt(data.get('avg_monthly_patients'))}
 Clinicians: {fmt(data.get('clinicians_total'))}
 
 Operational metrics:
-- Star rating: {fmt(data.get('star_rating'))} | Source: {star_source}
-- Readmission rate: {fmt(data.get('readmission_rate'), '%')} | Source: {readmit_source}
+- Star rating: {fmt(data.get('star_rating'))}
+- Readmission rate: {fmt(data.get('readmission_rate'), '%')}
 - Patient satisfaction: {fmt(data.get('patient_satisfaction'), '%')}
-- OASIS timeliness: {fmt(data.get('oasis_timeliness'), '%')} | Source: {oasis_source}
+- OASIS timeliness: {fmt(data.get('oasis_timeliness'), '%')}
 - Start-of-care delay: {fmt(data.get('soc_delay_days'), ' days')}
 - Visit completion rate: {fmt(data.get('visit_completion_rate'), '%')}
 - Documentation lag: {fmt(data.get('documentation_lag_hours'), ' hours')}
@@ -127,9 +120,9 @@ Technology + finance:
 - Improvement budget: {data['improvement_budget']}
 
 Execution conditions:
-- Leadership performance cadence: {data['leadership_readiness']}
-- Staff adoption behavior: {data['change_resistance']}
-- Training maturity level: {data['training_infrastructure']}
+- Leadership readiness: {data['leadership_readiness']}
+- Change resistance: {data['change_resistance']}
+- Training infrastructure: {data['training_infrastructure']}
 - Pain points: {pain_points}
 
 CMS context:
@@ -155,14 +148,11 @@ Notes: {data.get('notes', '')}
 
 Required headings:
 # Home Health Performance Intelligence Report
-## Data Integrity & Source Validation
+## Data Transparency Notice
 
 Matched Data Source:
-- {cms.get('matched_data_source', 'Unknown')}
+- Uploaded Provider CSV
 - Confidence Level: {cms.get('confidence_level','Unknown')}
-- Star Rating Source: {star_source}
-- Readmission Rate Source: {readmit_source}
-- OASIS Timeliness Source: {oasis_source}
 
 ## Executive Summary
 ## Performance Snapshot
@@ -211,8 +201,8 @@ def build_fallback_markdown(data: dict[str, Any]) -> str:
         },
         {
             "name": "Manager Coaching and Learning Cadence",
-            "fit": "Best when Leadership performance cadence is moderate and Staff adoption behavior is present.",
-            "trigger": "Leadership performance cadence, Training maturity level, turnover",
+            "fit": "Best when leadership readiness is moderate and change resistance is present.",
+            "trigger": "leadership readiness, training infrastructure, turnover",
             "impact": "Improves execution consistency and change adoption.",
             "hhvbp": "Builds operational capability to sustain performance gains.",
             "cost": "Low",
@@ -230,14 +220,11 @@ def build_fallback_markdown(data: dict[str, Any]) -> str:
     trend_lines = "\n".join([f"- {k}: {v['trend']} (forecast next: {v['forecast_next']})" for k, v in trends.items()]) or "- Trend data Not Provided."
     return f"""# Home Health Performance Intelligence Report
 
-## Data Integrity & Source Validation
+## Data Transparency Notice
 
 Matched Data Source:
-- {cms.get('matched_data_source', 'Unknown')}
+- Uploaded Provider CSV
 - Confidence Level: {cms.get('confidence_level','Unknown')}
-- Star Rating Source: {star_source}
-- Readmission Rate Source: {readmit_source}
-- OASIS Timeliness Source: {oasis_source}
 
 Facts in this report are based on the agency intake file and any CMS values returned during lookup. CMS verified metrics and benchmark excerpts are shown in the CMS context field. Interpretive statements and recommendations are generated from the provided metrics and scoring logic.
 
@@ -288,7 +275,7 @@ Facts in this report are based on the agency intake file and any CMS values retu
 - Days 61-90: Re-score the agency, compare against benchmark movement, and decide whether to scale automation or staffing interventions.
 
 ## Leadership and Change Management Considerations
-Leadership performance cadence and Staff adoption behavior should determine rollout speed. Start with low-friction workflow changes, publish weekly scorecards, and assign one accountable leader for each priority area.
+Leadership readiness and change resistance should determine rollout speed. Start with low-friction workflow changes, publish weekly scorecards, and assign one accountable leader for each priority area.
 
 ## Resource Allocation Guidance
 Fund first: frontline workflow discipline and manager coaching. Delay second: broad automation purchases until process reliability improves. Avoid now: large platform changes without clear baseline improvement targets.
@@ -365,8 +352,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
 
 
 

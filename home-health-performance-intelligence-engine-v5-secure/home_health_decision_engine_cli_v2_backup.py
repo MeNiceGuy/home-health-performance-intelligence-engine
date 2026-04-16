@@ -29,8 +29,8 @@ Create executive-ready reports for home health agencies.
 Separate facts, benchmarks, interpretations, and recommendations.
 Never invent CMS values. If a metric is Not Provided, say so.
 Never present user-reported data as verified.
-Clearly distinguish CMS-verified data, CSV-matched data, user-reported data, and Data Not Available data.
-If a metric is Data Not Available, explicitly state "Data not available".
+Clearly distinguish CMS-verified data, CSV-matched data, user-reported data, and missing data.
+If a metric is missing, explicitly state "Data not available".
 Do not infer or fabricate CMS values under any condition.
 """
 
@@ -127,9 +127,9 @@ Technology + finance:
 - Improvement budget: {data['improvement_budget']}
 
 Execution conditions:
-- Leadership performance cadence: {data['leadership_readiness']}
-- Staff adoption behavior: {data['change_resistance']}
-- Training maturity level: {data['training_infrastructure']}
+- Leadership readiness: {data['leadership_readiness']}
+- Change resistance: {data['change_resistance']}
+- Training infrastructure: {data['training_infrastructure']}
 - Pain points: {pain_points}
 
 CMS context:
@@ -155,7 +155,7 @@ Notes: {data.get('notes', '')}
 
 Required headings:
 # Home Health Performance Intelligence Report
-## Data Integrity & Source Validation
+## Data Transparency Notice
 
 Matched Data Source:
 - {cms.get('matched_data_source', 'Unknown')}
@@ -211,8 +211,8 @@ def build_fallback_markdown(data: dict[str, Any]) -> str:
         },
         {
             "name": "Manager Coaching and Learning Cadence",
-            "fit": "Best when Leadership performance cadence is moderate and Staff adoption behavior is present.",
-            "trigger": "Leadership performance cadence, Training maturity level, turnover",
+            "fit": "Best when leadership readiness is moderate and change resistance is present.",
+            "trigger": "leadership readiness, training infrastructure, turnover",
             "impact": "Improves execution consistency and change adoption.",
             "hhvbp": "Builds operational capability to sustain performance gains.",
             "cost": "Low",
@@ -230,7 +230,7 @@ def build_fallback_markdown(data: dict[str, Any]) -> str:
     trend_lines = "\n".join([f"- {k}: {v['trend']} (forecast next: {v['forecast_next']})" for k, v in trends.items()]) or "- Trend data Not Provided."
     return f"""# Home Health Performance Intelligence Report
 
-## Data Integrity & Source Validation
+## Data Transparency Notice
 
 Matched Data Source:
 - {cms.get('matched_data_source', 'Unknown')}
@@ -288,7 +288,7 @@ Facts in this report are based on the agency intake file and any CMS values retu
 - Days 61-90: Re-score the agency, compare against benchmark movement, and decide whether to scale automation or staffing interventions.
 
 ## Leadership and Change Management Considerations
-Leadership performance cadence and Staff adoption behavior should determine rollout speed. Start with low-friction workflow changes, publish weekly scorecards, and assign one accountable leader for each priority area.
+Leadership readiness and change resistance should determine rollout speed. Start with low-friction workflow changes, publish weekly scorecards, and assign one accountable leader for each priority area.
 
 ## Resource Allocation Guidance
 Fund first: frontline workflow discipline and manager coaching. Delay second: broad automation purchases until process reliability improves. Avoid now: large platform changes without clear baseline improvement targets.
@@ -365,8 +365,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
 
 
 

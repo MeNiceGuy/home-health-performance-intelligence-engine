@@ -4,7 +4,7 @@ import os
 import secrets
 from typing import Dict
 
-# Demo-only credential store. Replace with persistent DB-backed auth in production.
+# Simple secure user credentials store (in-memory for demo; use DB in prod)
 USER_CREDENTIALS: Dict[str, Dict[str, str]] = {}
 
 # Password hashing & verification using HMAC + SHA256 (replace with bcrypt/argon2 in prod)

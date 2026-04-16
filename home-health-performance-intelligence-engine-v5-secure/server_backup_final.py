@@ -522,31 +522,78 @@ def build_form_data(**kwargs: Any) -> dict[str, Any]:
 
 
 
+
+def resolve_metric(cms_val, csv_val, user_val):
+    if cms_val is not None:
+        return cms_val, 'CMS_VERIFIED'
+    if csv_val is not None:
+        return csv_val, 'CSV_MATCHED'
+    if user_val is not None:
+        return user_val, 'USER_REPORTED'
+    return None, 'MISSING'
+
+
+def resolve_metric(cms_val, csv_val, user_val):
+    if cms_val is not None:
+        return cms_val, 'CMS_VERIFIED'
+    if csv_val is not None:
+        return csv_val, 'CSV_MATCHED'
+    if user_val is not None:
+        return user_val, 'USER_REPORTED'
+    return None, 'MISSING'
+
+
+def resolve_metric(cms_val, csv_val, user_val):
+    if cms_val is not None:
+        return cms_val, 'CMS_VERIFIED'
+    if csv_val is not None:
+        return csv_val, 'CSV_MATCHED'
+    if user_val is not None:
+        return user_val, 'USER_REPORTED'
+    return None, 'MISSING'
+
 def process_agency_payload(data: dict[str, Any], save_record: bool = False) -> dict[str, Any]:
     agency_name = data.get('agency_name', '')
     state = data.get('state', '')
     city = data.get('city', '')
+
     local_match = match_uploaded_provider_csv(agency_name, state, city)
+    csv_verified = (local_match or {}).get('verified_metrics', {})
+
+    if agency_name and state:
+        data = enrich_with_cms(agency_name, state, city, data)
+
+    cms_verified = data.get('cms_context', {}).get('verified_metrics', {})
+
+    data['star_rating'], data['star_rating_source'] = resolve_metric(
+        cms_verified.get('star_rating'), csv_verified.get('star_rating'), data.get('star_rating')
+    )
+    data['readmission_rate'], data['readmission_rate_source'] = resolve_metric(
+        cms_verified.get('readmission_rate'), csv_verified.get('readmission_rate'), data.get('readmission_rate')
+    )
+    data['oasis_timeliness'], data['oasis_timeliness_source'] = resolve_metric(
+        cms_verified.get('timely_initiation_of_care'), csv_verified.get('oasis_timeliness'), data.get('oasis_timeliness')
+    )
 
     if local_match:
-        print('FORCED CSV MATCH:', local_match.get('matched_provider'))
-
-        verified = local_match.get('verified_metrics', {})
-
-        data['star_rating'] = verified.get('star_rating', data.get('star_rating'))
-        data['readmission_rate'] = verified.get('readmission_rate', data.get('readmission_rate'))
-        data['oasis_timeliness'] = verified.get('oasis_timeliness', data.get('oasis_timeliness'))
-
-        data['cms_context'] = {
-            'agency_match_confidence': local_match.get('match_confidence'),
-            'confidence_level': local_match.get('confidence_level'),
-            'match_score': local_match.get('match_score'),
+        data.setdefault('cms_context', {})
+        data['cms_context'].update({
+            'confidence_level': local_match.get('confidence_level', data['cms_context'].get('confidence_level', 'Unknown')),
+            'match_score': local_match.get('match_score', data['cms_context'].get('match_score')),
             'matched_data_source': 'uploaded_provider_csv',
-            'locked': True
-        }
+            'matched_provider_name': local_match.get('matched_provider'),
+            'matched_city': local_match.get('matched_city'),
+            'matched_state': local_match.get('matched_state'),
+        })
 
-        return data  # CRITICAL — STOP PIPELINE HERE@app.get('/login', response_class=HTMLResponse)
-@app.get("/login", response_class=HTMLResponse)
+    data = enrich_locally(data)
+    if save_record:
+        saved = save_agency_record(data)
+        append_audit_event('agency_record_saved', 'Agency analysis saved.', agency_name=data.get('agency_name', ''))
+        data['saved_record'] = {'id': saved['id'], 'updated_at': saved['updated_at']}
+    return data
+
+@app.get('/login', response_class=HTMLResponse)
 async def login_page(request: Request):
     if DEMO_MODE:
         return RedirectResponse(url='/', status_code=302)
@@ -736,7 +783,6 @@ async def api_emr_upload(
         raise HTTPException(status_code=400, detail='No file uploaded.')
     raw = await file.read()
     enforce_upload_policy(file.filename or '', len(raw))
-    enforce_upload_policy(file.filename or '', len(raw))
     try:
         if source_type == 'csv':
             rows = parse_emr_csv(raw.decode('utf-8-sig'))
@@ -744,6 +790,8 @@ async def api_emr_upload(
             rows = parse_fhir_bundle(json.loads(raw.decode('utf-8-sig')))
         else:
             raise HTTPException(status_code=400, detail='source_type must be csv or fhir')
+        if not rows:
+            raise HTTPException(status_code=400, detail='Uploaded file contained no usable EMR rows.')
         aggregated = aggregate_emr_rows(rows, agency_name=agency_name, state=state, city=city, ownership_type=ownership_type)
         payload = process_agency_payload(aggregated, save_record=True)
         save_emr_import(agency_name, source_type, len(rows), payload.get('cms_context', {}).get('emr_ingestion', {}))
@@ -842,30 +890,78 @@ async def api_audit(request: Request, limit: int = 50):
 
 
 @app.post('/generate_report')
-async def generate_report(request: Request):
-    input_path = UPLOAD_DIR / 'portfolio_agency.json'
-    if not input_path.exists():
-        raise HTTPException(status_code=500, detail='Missing uploads/portfolio_agency.json')
-
-    safe_name = 'portfolio_report'
-    md_output = REPORTS_DIR / f'{safe_name}.md'
-
-    result = subprocess.run(
-        [sys.executable, str(BASE_DIR / 'home_health_decision_engine_cli_v2.py'), '-i', str(input_path), '-o', str(md_output)],
-        capture_output=True, text=True, cwd=str(BASE_DIR)
+async def generate_report(
+    request: Request,
+    csrf_token_value: str = Form(..., alias='csrf_token'),
+    agency_name: str = Form(...),
+    state: str = Form(...),
+    city: str = Form(...),
+    ownership_type: str = Form(...),
+    avg_monthly_patients: str = Form(''),
+    clinicians_total: str = Form(''),
+    star_rating: str = Form(''),
+    readmission_rate: str = Form(''),
+    patient_satisfaction: str = Form(''),
+    oasis_timeliness: str = Form(''),
+    soc_delay_days: str = Form(''),
+    visit_completion_rate: str = Form(''),
+    documentation_lag_hours: str = Form(''),
+    turnover_rate: str = Form(''),
+    open_positions: str = Form(''),
+    visits_per_clinician_week: str = Form(''),
+    ehr_vendor: str = Form(''),
+    evv_present: str = Form('false'),
+    scheduling_software: str = Form(''),
+    telehealth_present: str = Form('false'),
+    automation_present: str = Form('false'),
+    monthly_revenue_range: str = Form(''),
+    cost_pressure_level: str = Form(...),
+    improvement_budget: str = Form(...),
+    leadership_readiness: str = Form(...),
+    change_resistance: str = Form(...),
+    training_infrastructure: str = Form(...),
+    pain_points: list[str] = Form([]),
+    notes: str = Form(''),
+    output_format: str = Form('pdf'),
+):
+    user = require_user(request, {'admin','analyst'})
+    validate_csrf(request, csrf_token_value)
+    data = build_form_data(
+        agency_name=agency_name, state=state, city=city, ownership_type=ownership_type,
+        avg_monthly_patients=avg_monthly_patients, clinicians_total=clinicians_total,
+        star_rating=star_rating, readmission_rate=readmission_rate, patient_satisfaction=patient_satisfaction,
+        oasis_timeliness=oasis_timeliness, soc_delay_days=soc_delay_days, visit_completion_rate=visit_completion_rate,
+        documentation_lag_hours=documentation_lag_hours, turnover_rate=turnover_rate, open_positions=open_positions,
+        visits_per_clinician_week=visits_per_clinician_week, ehr_vendor=ehr_vendor, evv_present=evv_present,
+        scheduling_software=scheduling_software, telehealth_present=telehealth_present,
+        automation_present=automation_present, monthly_revenue_range=monthly_revenue_range,
+        cost_pressure_level=cost_pressure_level, improvement_budget=improvement_budget,
+        leadership_readiness=leadership_readiness, change_resistance=change_resistance,
+        training_infrastructure=training_infrastructure, pain_points=pain_points, notes=notes,
     )
-
-    if result.returncode != 0:
-        raise HTTPException(
-        status_code=500,
-        detail=f"Report generation failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
-    )
-
-    pdf_output = md_output.with_suffix('.pdf')
-    if pdf_output.exists():
+    try:
+        data = process_agency_payload(data, save_record=True)
+        safe_name = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '_' for ch in agency_name.strip()) or 'agency'
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8', dir=str(UPLOAD_DIR)) as tmp:
+            json.dump(data, tmp, ensure_ascii=False, indent=2)
+            tmp_path = Path(tmp.name)
+        md_output = REPORTS_DIR / f'{safe_name}.md'
+        result = subprocess.run(
+            [sys.executable, str(BASE_DIR / 'home_health_decision_engine_cli_v2.py'), '-i', str(tmp_path), '-o', str(md_output)],
+            capture_output=True, text=True, cwd=str(BASE_DIR)
+        )
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail=f'Report generation failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}')
+        pdf_output = md_output.with_suffix('.pdf')
+        append_audit_event('report_generated', f'Report generated in {output_format.upper()} format.', user=user['username'], agency_name=agency_name, ip_address=client_ip(request))
+        if output_format.lower().strip() == 'md':
+            return FileResponse(str(md_output), media_type='text/markdown', filename=md_output.name)
         return FileResponse(str(pdf_output), media_type='application/pdf', filename=pdf_output.name)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f'Unexpected server error: {exc}')
 
-    return FileResponse(str(md_output), media_type='text/markdown', filename=md_output.name)
 
 @app.get('/cms_debug')
 async def cms_debug(request: Request, agency_name: str, state: str, city: str = ''):
@@ -972,66 +1068,6 @@ async def dashboard_page(request: Request):
 
 
 
-
-
-
-
-
-
-
-
-@app.post("/api/report-test")
-async def api_report_test():
-    import subprocess
-    from pathlib import Path
-    from fastapi import HTTPException
-
-    input_path = Path("uploads/test_agency.json")
-    output_path = Path("reports/frontend_test_report.md")
-
-    if not input_path.exists():
-        raise HTTPException(status_code=500, detail="Missing uploads/test_agency.json")
-
-    result = subprocess.run(
-        ["python", "home_health_decision_engine_cli_v2.py", "-i", str(input_path), "-o", str(output_path)],
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode != 0:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Report generation failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
-        )
-
-    return {"report": output_path.read_text(encoding="utf-8")}
-
-@app.get("/api/report-test-get")
-async def api_report_test_get():
-    import subprocess
-    from pathlib import Path
-    from fastapi.responses import PlainTextResponse
-    from fastapi import HTTPException
-
-    input_path = Path("uploads/test_agency.json")
-    output_path = Path("reports/frontend_test_report.md")
-
-    if not input_path.exists():
-        raise HTTPException(status_code=500, detail="Missing uploads/test_agency.json")
-
-    result = subprocess.run(
-        ["python", "home_health_decision_engine_cli_v2.py", "-i", str(input_path), "-o", str(output_path)],
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode != 0:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Report generation failed.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
-        )
-
-    return PlainTextResponse(output_path.read_text(encoding="utf-8"))
 
 
 

@@ -372,16 +372,10 @@ def build_story(md_text: str, chart_path: Path | None = None):
             story.append(Spacer(1, 0.04 * inch))
 
         elif block_type == "h2":
-            heading_text = clean_text(value)
             story.append(Spacer(1, 0.03 * inch))
-            story.append(Paragraph(heading_text, styles["SectionHeadingBCG"]))
+            story.append(Paragraph(clean_text(value), styles["SectionHeadingBCG"]))
 
-            if heading_text.lower() == "data transparency notice":
-                story.append(Spacer(1, 0.03 * inch))
-                story.append(HRFlowable(width="100%", thickness=0.9, color=ACCENT))
-                story.append(Spacer(1, 0.06 * inch))
-
-            if heading_text.lower() == "performance snapshot" and chart_path and chart_path.exists() and not chart_inserted:
+            if clean_text(value).lower() == "performance snapshot" and chart_path and chart_path.exists() and not chart_inserted:
                 story.append(Spacer(1, 0.08 * inch))
                 chart = Image(str(chart_path))
                 chart.drawWidth = 6.4 * inch
